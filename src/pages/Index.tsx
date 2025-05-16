@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FileUploader from "@/components/FileUploader";
@@ -7,6 +6,7 @@ import FileComparison from "@/components/FileComparison";
 import SchematicComparison from "@/components/SchematicComparison";
 import AIChat from "@/components/AIChat";
 import ExportOptions from "@/components/ExportOptions";
+import FileTable from "@/components/FileTable";
 import { UploadedFile, ComparisonFiles, ComparisonResult, ElectronicComponent, NetlistConnection } from "@/types";
 import { toast } from "@/components/ui/sonner";
 
@@ -22,6 +22,7 @@ const Index = () => {
   const [components, setComponents] = useState<ElectronicComponent[]>([]);
   const [connections, setConnections] = useState<NetlistConnection[]>([]);
   const [fileType, setFileType] = useState<"bom" | "netlist" | null>(null);
+  const [tablePreview, setTablePreview] = useState<string[][] | null>(null);
 
   useEffect(() => {
     // When two files are selected, automatically set them as comparison files
@@ -41,6 +42,25 @@ const Index = () => {
         result: null,
       });
       setFileType(null);
+    }
+  }, [selectedFiles]);
+
+  // Add effect to update table preview when a single file is selected
+  useEffect(() => {
+    if (selectedFiles.length === 1) {
+      const file = selectedFiles[0];
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      let data: string[][] = [];
+      if (ext === "csv" || ext === "xml") { // .xml for BOM
+        data = file.content.split('\n').map(row => row.split(','));
+      } else if (ext === "net") {
+        data = file.content.split('\n').map(row => [row]);
+      } else {
+        data = [["Preview not available for this file type."]];
+      }
+      setTablePreview(data);
+    } else {
+      setTablePreview(null);
     }
   }, [selectedFiles]);
 
@@ -285,6 +305,13 @@ const Index = () => {
                   onSelectFile={handleSelectFile}
                   onRemoveFile={handleRemoveFile}
                 />
+                {/* Show table preview if a single file is selected */}
+                {tablePreview && (
+                  <div className="mt-6">
+                    <h2 className="text-lg font-semibold mb-2">File Table Preview</h2>
+                    <FileTable data={tablePreview} />
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="compare" className="space-y-4">
