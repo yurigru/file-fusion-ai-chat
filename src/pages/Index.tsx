@@ -7,6 +7,7 @@ import SchematicComparison from "@/components/SchematicComparison";
 import AIChat from "@/components/AIChat";
 import ExportOptions from "@/components/ExportOptions";
 import FileTable from "@/components/FileTable";
+import BOMCompare from "@/components/BOMCompare";
 import { UploadedFile, ComparisonFiles, ComparisonResult, ElectronicComponent, NetlistConnection } from "@/types";
 import { toast } from "@/components/ui/sonner";
 
@@ -154,40 +155,79 @@ const Index = () => {
     }
   };
 
-  const handleCompare = () => {
+  const handleCompare = async () => {
     if (!comparisonFiles.file1 || !comparisonFiles.file2) {
       toast.error("Please select two files to compare");
       return;
     }
 
-    // Mock comparison for UI prototype
-    // This would be replaced with actual comparison logic
+    // If both files are .xml, use FastAPI for BOM comparison
+    if (
+      comparisonFiles.file1.name.toLowerCase().endsWith('.xml') &&
+      comparisonFiles.file2.name.toLowerCase().endsWith('.xml')
+    ) {
+      const oldFile = new File([
+        comparisonFiles.file1.content
+      ], comparisonFiles.file1.name, {
+        type: comparisonFiles.file1.type,
+        lastModified: comparisonFiles.file1.lastModified,
+      });
+      const newFile = new File([
+        comparisonFiles.file2.content
+      ], comparisonFiles.file2.name, {
+        type: comparisonFiles.file2.type,
+        lastModified: comparisonFiles.file2.lastModified,
+      });
+      const formData = new FormData();
+      formData.append("old_file", oldFile);
+      formData.append("new_file", newFile);
+      try {
+        const response = await fetch("http://localhost:8000/compare-bom", {
+          method: "POST",
+          body: formData,
+        });
+        if (!response.ok) throw new Error("Comparison failed");
+        const data = await response.json();
+        setComparisonFiles({
+          ...comparisonFiles,
+          result: {
+            added: data.added.map((_, i) => i.toString()),
+            deleted: data.removed.map((_, i) => i.toString()),
+            changed: data.changed.map((chg, i) => ({
+              line: i,
+              original: JSON.stringify(chg.Old),
+              modified: JSON.stringify(chg.New),
+            })),
+          },
+        });
+        setActiveTab("compare");
+        toast.success("Comparison completed (BOM via FastAPI)");
+        return;
+      } catch (err) {
+        toast.error("BOM comparison failed");
+        return;
+      }
+    }
+
+    // Fallback: mock comparison for UI prototype
     const simulateComparison = (): ComparisonResult => {
       const file1Lines = comparisonFiles.file1?.content.split("\n") || [];
       const file2Lines = comparisonFiles.file2?.content.split("\n") || [];
-      
-      // Create some simulated differences
       const added: string[] = [];
       const deleted: string[] = [];
       const changed: { line: number; original: string; modified: string }[] = [];
-      
-      // Simulate some random additions (for demo purposes)
       for (let i = 0; i < file2Lines.length; i++) {
-        if (Math.random() < 0.1) {  // 10% chance for each line
+        if (Math.random() < 0.1) {
           added.push(i.toString());
         }
       }
-      
-      // Simulate some random deletions (for demo purposes)
       for (let i = 0; i < file1Lines.length; i++) {
-        if (Math.random() < 0.1) {  // 10% chance for each line
+        if (Math.random() < 0.1) {
           deleted.push(i.toString());
         }
       }
-      
-      // Simulate some random changes (for demo purposes)
       for (let i = 0; i < Math.min(file1Lines.length, file2Lines.length); i++) {
-        if (Math.random() < 0.1 && !deleted.includes(i.toString())) {  // 10% chance for each line
+        if (Math.random() < 0.1 && !deleted.includes(i.toString())) {
           changed.push({
             line: i,
             original: file1Lines[i] || "",
@@ -195,7 +235,6 @@ const Index = () => {
           });
         }
       }
-      
       return { added, deleted, changed };
     };
 
@@ -204,15 +243,11 @@ const Index = () => {
       ...comparisonFiles,
       result,
     });
-    
-    // Generate mock component or connection data based on file type
     if (fileType === "bom") {
       generateMockComponents(result);
     } else if (fileType === "netlist") {
       generateMockConnections(result);
     }
-    
-    // Switch to the Compare tab
     setActiveTab("compare");
     toast.success("Comparison completed");
   };
@@ -315,6 +350,15 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="compare" className="space-y-4">
+                {/* Only show BOMCompare if both selected files are .xml (BOM) */}
+                {selectedFiles.length === 2 &&
+                  selectedFiles.every(f => f.name.toLowerCase().endsWith('.xml')) && (() => {
+                    // Reconstruct File objects from UploadedFile content for BOMCompare
+                    const [file1, file2] = selectedFiles;
+                    const oldFile = new File([file1.content], file1.name, { type: file1.type, lastModified: file1.lastModified });
+                    const newFile = new File([file2.content], file2.name, { type: file2.type, lastModified: file2.lastModified });
+                    return <BOMCompare oldFile={oldFile} newFile={newFile} />;
+                  })()}
                 {fileType ? (
                   <SchematicComparison
                     comparisonFiles={comparisonFiles}
