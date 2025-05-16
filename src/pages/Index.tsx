@@ -4,9 +4,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FileUploader from "@/components/FileUploader";
 import FileList from "@/components/FileList";
 import FileComparison from "@/components/FileComparison";
+import SchematicComparison from "@/components/SchematicComparison";
 import AIChat from "@/components/AIChat";
 import ExportOptions from "@/components/ExportOptions";
-import { UploadedFile, ComparisonFiles, ComparisonResult } from "@/types";
+import { UploadedFile, ComparisonFiles, ComparisonResult, ElectronicComponent, NetlistConnection } from "@/types";
 import { toast } from "@/components/ui/sonner";
 
 const Index = () => {
@@ -18,6 +19,9 @@ const Index = () => {
     file2: null,
     result: null,
   });
+  const [components, setComponents] = useState<ElectronicComponent[]>([]);
+  const [connections, setConnections] = useState<NetlistConnection[]>([]);
+  const [fileType, setFileType] = useState<"bom" | "netlist" | null>(null);
 
   useEffect(() => {
     // When two files are selected, automatically set them as comparison files
@@ -27,17 +31,67 @@ const Index = () => {
         file2: selectedFiles[1],
         result: null,
       });
+      
+      // Try to detect the file type
+      detectFileType(selectedFiles[0], selectedFiles[1]);
     } else if (selectedFiles.length < 2) {
       setComparisonFiles({
         file1: selectedFiles[0] || null,
         file2: null,
         result: null,
       });
+      setFileType(null);
     }
   }, [selectedFiles]);
 
+  const detectFileType = (file1: UploadedFile, file2: UploadedFile) => {
+    const determineType = (file: UploadedFile): "bom" | "netlist" | null => {
+      const fileName = file.name.toLowerCase();
+      if (fileName.includes("bom") || fileName.endsWith(".csv") || fileName.endsWith(".xlsx")) {
+        return "bom";
+      } else if (fileName.includes("net") || fileName.endsWith(".net") || fileName.endsWith(".netlist")) {
+        return "netlist";
+      }
+      return null;
+    };
+
+    const type1 = determineType(file1);
+    const type2 = determineType(file2);
+
+    // Only set file type if both files are of the same type
+    if (type1 && type1 === type2) {
+      setFileType(type1);
+      // Initialize the appropriate data structure
+      if (type1 === "bom") {
+        setComponents([]);
+      } else if (type1 === "netlist") {
+        setConnections([]);
+      }
+    } else {
+      setFileType(null);
+    }
+  };
+
   const handleFilesUploaded = (newFiles: UploadedFile[]) => {
-    setFiles((prev) => [...prev, ...newFiles]);
+    // Process uploaded files
+    const processedFiles = newFiles.map(file => {
+      // Try to detect if this is a BOM or netlist file
+      const fileName = file.name.toLowerCase();
+      let fileType: "bom" | "netlist" | "other" = "other";
+      
+      if (fileName.includes("bom") || fileName.endsWith(".csv") || fileName.endsWith(".xlsx")) {
+        fileType = "bom";
+      } else if (fileName.includes("net") || fileName.endsWith(".net") || fileName.endsWith(".netlist")) {
+        fileType = "netlist";
+      }
+      
+      return {
+        ...file,
+        fileType
+      };
+    });
+    
+    setFiles((prev) => [...prev, ...processedFiles]);
     setActiveTab("files");
   };
 
@@ -131,18 +185,70 @@ const Index = () => {
       result,
     });
     
+    // Generate mock component or connection data based on file type
+    if (fileType === "bom") {
+      generateMockComponents(result);
+    } else if (fileType === "netlist") {
+      generateMockConnections(result);
+    }
+    
     // Switch to the Compare tab
     setActiveTab("compare");
     toast.success("Comparison completed");
+  };
+
+  const generateMockComponents = (result: ComparisonResult) => {
+    if (!comparisonFiles.file1) return;
+    
+    const mockComponents: ElectronicComponent[] = [];
+    const lines = comparisonFiles.file1.content.split('\n').filter(line => line.trim().length > 0);
+    
+    lines.slice(0, 10).forEach((line, index) => {
+      const fields = line.split(',');
+      if (fields.length >= 2) {
+        mockComponents.push({
+          id: `comp-${index}`,
+          reference: fields[0] || `R${index}`,
+          value: fields[1] || `10k`,
+          quantity: parseInt(fields[2] || "1"),
+          description: fields[3] || 'Resistor',
+          manufacturer: fields[4] || 'Generic',
+          partNumber: fields[5] || `PART-${index}`,
+        });
+      }
+    });
+    
+    setComponents(mockComponents);
+  };
+
+  const generateMockConnections = (result: ComparisonResult) => {
+    if (!comparisonFiles.file1) return;
+    
+    const mockConnections: NetlistConnection[] = [];
+    const lines = comparisonFiles.file1.content.split('\n').filter(line => line.trim().length > 0);
+    
+    lines.slice(0, 10).forEach((line, index) => {
+      const fields = line.split(' ').filter(f => f.trim().length > 0);
+      if (fields.length >= 2) {
+        mockConnections.push({
+          id: `net-${index}`,
+          net: fields[0] || `NET${index}`,
+          nodes: fields.slice(1) || [`U1:${index}`, `R${index}:1`],
+          type: index % 2 === 0 ? 'signal' : 'power',
+        });
+      }
+    });
+    
+    setConnections(mockConnections);
   };
 
   return (
     <div className="container mx-auto py-8 max-w-6xl">
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">File Analyzer</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Electronic Schematic Analyzer</h1>
           <p className="text-muted-foreground mt-2">
-            Upload, analyze, and compare files with AI assistance
+            Upload, analyze, and compare BOM and netlist files with AI assistance
           </p>
         </div>
 
@@ -160,8 +266,11 @@ const Index = () => {
                   comparisonResult={comparisonFiles.result}
                   comparedFiles={{
                     file1Name: comparisonFiles.file1?.name || null,
-                    file2Name: comparisonFiles.file2?.name || null
+                    file2Name: comparisonFiles.file2?.name || null,
+                    fileType: fileType
                   }}
+                  components={components}
+                  connections={connections}
                 />
               </div>
 
@@ -179,10 +288,17 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="compare" className="space-y-4">
-                <FileComparison
-                  comparisonFiles={comparisonFiles}
-                  onCompare={handleCompare}
-                />
+                {fileType ? (
+                  <SchematicComparison
+                    comparisonFiles={comparisonFiles}
+                    onCompare={handleCompare}
+                  />
+                ) : (
+                  <FileComparison
+                    comparisonFiles={comparisonFiles}
+                    onCompare={handleCompare}
+                  />
+                )}
               </TabsContent>
             </Tabs>
           </div>

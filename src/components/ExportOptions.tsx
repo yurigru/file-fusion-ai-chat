@@ -1,5 +1,5 @@
 
-import { Download, FileJson } from "lucide-react";
+import { Download, FileJson, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,21 +7,29 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ComparisonResult } from "@/types";
+import { ComparisonResult, ElectronicComponent, NetlistConnection } from "@/types";
 
 interface ExportOptionsProps {
   comparisonResult: ComparisonResult | null;
   comparedFiles: {
     file1Name: string | null;
     file2Name: string | null;
+    fileType?: "bom" | "netlist" | null;
   };
+  components?: ElectronicComponent[];
+  connections?: NetlistConnection[];
 }
 
-const ExportOptions = ({ comparisonResult, comparedFiles }: ExportOptionsProps) => {
+const ExportOptions = ({ 
+  comparisonResult, 
+  comparedFiles, 
+  components = [], 
+  connections = [] 
+}: ExportOptionsProps) => {
   const exportAsHTML = () => {
     if (!comparisonResult) return;
     
-    const { file1Name, file2Name } = comparedFiles;
+    const { file1Name, file2Name, fileType } = comparedFiles;
     
     // Create HTML content
     const htmlContent = `
@@ -33,7 +41,7 @@ const ExportOptions = ({ comparisonResult, comparedFiles }: ExportOptionsProps) 
         <title>Comparison: ${file1Name} vs ${file2Name}</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }
-          h1 { border-bottom: 1px solid #eee; padding-bottom: 10px; }
+          h1, h2 { border-bottom: 1px solid #eee; padding-bottom: 10px; }
           pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
           .added { background-color: #e6ffed; color: #22863a; }
           .deleted { background-color: #ffeef0; color: #cb2431; }
@@ -44,12 +52,19 @@ const ExportOptions = ({ comparisonResult, comparedFiles }: ExportOptionsProps) 
           .summary .added-dot { background-color: #22863a; }
           .summary .deleted-dot { background-color: #cb2431; }
           .summary .changed-dot { background-color: #735c0f; }
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+          th { background-color: #f8f8f8; font-weight: bold; }
+          tr.added { background-color: #e6ffed; }
+          tr.deleted { background-color: #ffeef0; }
+          tr.changed { background-color: #fff5b1; }
         </style>
       </head>
       <body>
-        <h1>File Comparison Report</h1>
+        <h1>Electronic Schematic Comparison Report</h1>
         <p><strong>File 1:</strong> ${file1Name}</p>
         <p><strong>File 2:</strong> ${file2Name}</p>
+        <p><strong>File Type:</strong> ${fileType === 'bom' ? 'Bill of Materials (BOM)' : fileType === 'netlist' ? 'Netlist' : 'Unknown'}</p>
         
         <div class="summary">
           <div><span class="dot added-dot"></span> ${comparisonResult.added.length} Added</div>
@@ -57,7 +72,10 @@ const ExportOptions = ({ comparisonResult, comparedFiles }: ExportOptionsProps) 
           <div><span class="dot changed-dot"></span> ${comparisonResult.changed.length} Changed</div>
         </div>
         
-        <h2>Changes</h2>
+        ${fileType === 'bom' && components.length > 0 ? generateBOMTable(components, comparisonResult) : ''}
+        ${fileType === 'netlist' && connections.length > 0 ? generateNetlistTable(connections, comparisonResult) : ''}
+        
+        <h2>Raw Changes</h2>
         <pre>${formatChangesForHTML(comparisonResult)}</pre>
         
         <footer>
@@ -71,6 +89,80 @@ const ExportOptions = ({ comparisonResult, comparedFiles }: ExportOptionsProps) 
     downloadFile(htmlContent, `comparison-${file1Name}-${file2Name}.html`, 'text/html');
   };
   
+  const generateBOMTable = (components: ElectronicComponent[], result: ComparisonResult) => {
+    return `
+      <h2>Component Comparison</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>Value</th>
+            <th>Quantity</th>
+            <th>Manufacturer</th>
+            <th>Part Number</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${components.map((component, index) => {
+            // Determine if this component was added, deleted, or changed
+            const isAdded = result.added.includes(index.toString());
+            const isDeleted = result.deleted.includes(index.toString());
+            const isChanged = result.changed.some(change => change.line === index);
+            const status = isAdded ? 'Added' : isDeleted ? 'Deleted' : isChanged ? 'Changed' : 'Unchanged';
+            const rowClass = isAdded ? 'added' : isDeleted ? 'deleted' : isChanged ? 'changed' : '';
+            
+            return `
+              <tr class="${rowClass}">
+                <td>${component.reference}</td>
+                <td>${component.value}</td>
+                <td>${component.quantity}</td>
+                <td>${component.manufacturer || '-'}</td>
+                <td>${component.partNumber || '-'}</td>
+                <td>${status}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  };
+  
+  const generateNetlistTable = (connections: NetlistConnection[], result: ComparisonResult) => {
+    return `
+      <h2>Netlist Comparison</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Net</th>
+            <th>Nodes</th>
+            <th>Type</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${connections.map((connection, index) => {
+            // Determine if this connection was added, deleted, or changed
+            const isAdded = result.added.includes(index.toString());
+            const isDeleted = result.deleted.includes(index.toString());
+            const isChanged = result.changed.some(change => change.line === index);
+            const status = isAdded ? 'Added' : isDeleted ? 'Deleted' : isChanged ? 'Changed' : 'Unchanged';
+            const rowClass = isAdded ? 'added' : isDeleted ? 'deleted' : isChanged ? 'changed' : '';
+            
+            return `
+              <tr class="${rowClass}">
+                <td>${connection.net}</td>
+                <td>${connection.nodes.join(', ')}</td>
+                <td>${connection.type || 'signal'}</td>
+                <td>${status}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  };
+  
   const exportAsPDF = () => {
     // For the UI prototype, we'll just alert that this would generate a PDF
     alert("PDF export functionality will be implemented with a PDF generation library.");
@@ -79,18 +171,73 @@ const ExportOptions = ({ comparisonResult, comparedFiles }: ExportOptionsProps) 
   const exportAsJSON = () => {
     if (!comparisonResult) return;
     
-    const { file1Name, file2Name } = comparedFiles;
+    const { file1Name, file2Name, fileType } = comparedFiles;
     
     // Create JSON content
     const jsonContent = JSON.stringify({
       file1: file1Name,
       file2: file2Name,
+      fileType: fileType,
       timestamp: new Date().toISOString(),
-      comparison: comparisonResult
+      comparison: comparisonResult,
+      data: fileType === 'bom' ? { components } : fileType === 'netlist' ? { connections } : {}
     }, null, 2);
     
     // Create blob and download
     downloadFile(jsonContent, `comparison-${file1Name}-${file2Name}.json`, 'application/json');
+  };
+  
+  const exportAsCSV = () => {
+    if (!comparisonResult) return;
+    
+    const { file1Name, file2Name, fileType } = comparedFiles;
+    let csvContent = '';
+    
+    if (fileType === 'bom' && components.length > 0) {
+      // Header
+      csvContent = 'Reference,Value,Quantity,Manufacturer,Part Number,Status\n';
+      
+      // Data rows
+      components.forEach((component, index) => {
+        const isAdded = comparisonResult.added.includes(index.toString());
+        const isDeleted = comparisonResult.deleted.includes(index.toString());
+        const isChanged = comparisonResult.changed.some(change => change.line === index);
+        const status = isAdded ? 'Added' : isDeleted ? 'Deleted' : isChanged ? 'Changed' : 'Unchanged';
+        
+        csvContent += `"${component.reference}","${component.value}",${component.quantity},"${component.manufacturer || ''}","${component.partNumber || ''}","${status}"\n`;
+      });
+    } else if (fileType === 'netlist' && connections.length > 0) {
+      // Header
+      csvContent = 'Net,Nodes,Type,Status\n';
+      
+      // Data rows
+      connections.forEach((connection, index) => {
+        const isAdded = comparisonResult.added.includes(index.toString());
+        const isDeleted = comparisonResult.deleted.includes(index.toString());
+        const isChanged = comparisonResult.changed.some(change => change.line === index);
+        const status = isAdded ? 'Added' : isDeleted ? 'Deleted' : isChanged ? 'Changed' : 'Unchanged';
+        
+        csvContent += `"${connection.net}","${connection.nodes.join('; ')}","${connection.type || 'signal'}","${status}"\n`;
+      });
+    } else {
+      // Fallback to simple changes CSV
+      csvContent = 'Type,Line,Content\n';
+      
+      comparisonResult.added.forEach(line => {
+        csvContent += `"Added","${line}","Added line"\n`;
+      });
+      
+      comparisonResult.deleted.forEach(line => {
+        csvContent += `"Deleted","${line}","Deleted line"\n`;
+      });
+      
+      comparisonResult.changed.forEach(change => {
+        csvContent += `"Changed","${change.line}","${change.original.replace(/"/g, '""')}" -> "${change.modified.replace(/"/g, '""')}"\n`;
+      });
+    }
+    
+    // Create blob and download
+    downloadFile(csvContent, `comparison-${file1Name}-${file2Name}.csv`, 'text/csv');
   };
   
   const formatChangesForHTML = (result: ComparisonResult): string => {
@@ -148,6 +295,10 @@ const ExportOptions = ({ comparisonResult, comparedFiles }: ExportOptionsProps) 
         <DropdownMenuItem onClick={exportAsJSON}>
           <FileJson className="h-4 w-4 mr-2" />
           Export as JSON
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={exportAsCSV}>
+          <Table className="h-4 w-4 mr-2" />
+          Export as CSV
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

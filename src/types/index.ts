@@ -7,6 +7,25 @@ export interface UploadedFile {
   lastModified: number;
   content: string;
   uploadProgress?: number;
+  fileType?: "bom" | "netlist" | "other";
+}
+
+export interface ElectronicComponent {
+  id: string;
+  reference: string;
+  value: string;
+  footprint?: string;
+  quantity: number;
+  description?: string;
+  manufacturer?: string;
+  partNumber?: string;
+}
+
+export interface NetlistConnection {
+  id: string;
+  net: string;
+  nodes: string[];
+  type?: string;
 }
 
 export interface ComparisonResult {
@@ -16,6 +35,23 @@ export interface ComparisonResult {
     line: number;
     original: string;
     modified: string;
+  }[];
+  // For BOM specific comparisons
+  addedComponents?: ElectronicComponent[];
+  deletedComponents?: ElectronicComponent[];
+  changedComponents?: {
+    id: string;
+    reference: string;
+    original: Partial<ElectronicComponent>;
+    modified: Partial<ElectronicComponent>;
+  }[];
+  // For Netlist specific comparisons
+  addedConnections?: NetlistConnection[];
+  deletedConnections?: NetlistConnection[];
+  changedConnections?: {
+    id: string;
+    original: Partial<NetlistConnection>;
+    modified: Partial<NetlistConnection>;
   }[];
 }
 
