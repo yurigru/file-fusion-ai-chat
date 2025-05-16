@@ -3,6 +3,7 @@ import { ComparisonFiles, ComparisonResult, UploadedFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeftRight, Plus, Minus, Check, RefreshCw } from "lucide-react";
+import FileTable from "@/components/FileTable";
 
 interface FileComparisonProps {
   comparisonFiles: ComparisonFiles;
@@ -12,6 +13,9 @@ interface FileComparisonProps {
 const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => {
   const [activeTab, setActiveTab] = useState("all");
   const [visibleLines, setVisibleLines] = useState<string[]>([]);
+  const [addedTable, setAddedTable] = useState<string[][]>([]);
+  const [deletedTable, setDeletedTable] = useState<string[][]>([]);
+  const [changedTable, setChangedTable] = useState<string[][]>([]);
   
   const { file1, file2, result } = comparisonFiles;
 
@@ -21,66 +25,74 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
     }
   }, [result, activeTab]);
 
+  useEffect(() => {
+    if (result && file1 && file2) {
+      // If both files are .xml and backend result is present, parse backend data for tables
+      const isXML = file1.name.toLowerCase().endsWith('.xml') && file2.name.toLowerCase().endsWith('.xml');
+      if (isXML && result.added && result.deleted && result.changed) {
+        // Parse backend result (JSON stringified objects)
+        const parseComp = (comp: any) => [comp.Reference, comp.Value, comp.Manufacturer, comp.PartNumber];
+        setAddedTable(result.addedComponents ? result.addedComponents.map(comp => [comp.reference, comp.value, comp.manufacturer, comp.partNumber]) : []);
+        setDeletedTable(result.deletedComponents ? result.deletedComponents.map(comp => [comp.reference, comp.value, comp.manufacturer, comp.partNumber]) : []);
+        setChangedTable(result.changedComponents ? result.changedComponents.map(chg => [chg.reference, chg.original.value, chg.modified.value, chg.original.manufacturer, chg.modified.manufacturer, chg.original.partNumber, chg.modified.partNumber]) : []);
+      } else {
+        setAddedTable([]);
+        setDeletedTable([]);
+        setChangedTable([]);
+      }
+    }
+  }, [result, file1, file2]);
+
   const updateVisibleLines = () => {
     if (!result) return;
-    
-    let lines: string[] = [];
-    
+    let nextVisibleLines: string[] = [];
     if (file1 && file2) {
-      const file1Lines = file1.content.split('\n');
-      const file2Lines = file2.content.split('\n');
-      
-      // Create a merged view based on the active tab
-      const allLines = new Map<number, { content: string; status: 'added' | 'deleted' | 'changed' | 'unchanged' }>();
-      
-      // Add all lines from file1 as unchanged first
-      file1Lines.forEach((line, idx) => {
-        allLines.set(idx, { content: line, status: 'unchanged' });
-      });
-      
-      // Mark deleted lines
-      if (activeTab === 'all' || activeTab === 'deleted') {
-        result.deleted.forEach(lineIdx => {
-          const idx = parseInt(lineIdx);
-          if (allLines.has(idx)) {
-            allLines.set(idx, { content: file1Lines[idx], status: 'deleted' });
-          }
+      // If result is empty and both files are .xml, show the full XML content
+      const isXML = file1.name.toLowerCase().endsWith('.xml') && file2.name.toLowerCase().endsWith('.xml');
+      const noChanges = result.added.length === 0 && result.deleted.length === 0 && result.changed.length === 0;
+      if (isXML && noChanges) {
+        nextVisibleLines = file2.content.split('\n');
+      } else {
+        const file1Lines = file1.content.split('\n');
+        const file2Lines = file2.content.split('\n');
+        const allLines = new Map<number, { content: string; status: 'added' | 'deleted' | 'changed' | 'unchanged' }>();
+        file1Lines.forEach((line, idx) => {
+          allLines.set(idx, { content: line, status: 'unchanged' });
         });
+        if (activeTab === 'all' || activeTab === 'deleted') {
+          result.deleted.forEach(lineIdx => {
+            const idx = parseInt(lineIdx);
+            if (allLines.has(idx)) {
+              allLines.set(idx, { content: file1Lines[idx], status: 'deleted' });
+            }
+          });
+        }
+        if (activeTab === 'all' || activeTab === 'added') {
+          result.added.forEach(lineIdx => {
+            const idx = parseInt(lineIdx);
+            allLines.set(file1Lines.length + idx, { content: file2Lines[idx], status: 'added' });
+          });
+        }
+        if (activeTab === 'all' || activeTab === 'changed') {
+          result.changed.forEach(change => {
+            allLines.set(change.line, { content: change.modified, status: 'changed' });
+          });
+        }
+        nextVisibleLines = Array.from(allLines.entries())
+          .sort((a, b) => a[0] - b[0])
+          .map(([_, value]) => {
+            let prefix = '';
+            switch (value.status) {
+              case 'added': prefix = '+ '; break;
+              case 'deleted': prefix = '- '; break;
+              case 'changed': prefix = '~ '; break;
+              default: prefix = '  ';
+            }
+            return `${prefix}${value.content}`;
+          });
       }
-      
-      // Add new lines
-      if (activeTab === 'all' || activeTab === 'added') {
-        result.added.forEach(lineIdx => {
-          const idx = parseInt(lineIdx);
-          allLines.set(file1Lines.length + idx, { content: file2Lines[idx], status: 'added' });
-        });
-      }
-      
-      // Mark changed lines
-      if (activeTab === 'all' || activeTab === 'changed') {
-        result.changed.forEach(change => {
-          allLines.set(change.line, { content: change.modified, status: 'changed' });
-        });
-      }
-      
-      // Convert map to array and sort by line number
-      const sorted = Array.from(allLines.entries())
-        .sort((a, b) => a[0] - b[0])
-        .map(([_, value]) => {
-          let prefix = '';
-          switch (value.status) {
-            case 'added': prefix = '+ '; break;
-            case 'deleted': prefix = '- '; break;
-            case 'changed': prefix = '~ '; break;
-            default: prefix = '  ';
-          }
-          return `${prefix}${value.content}`;
-        });
-      
-      lines = sorted;
     }
-    
-    setVisibleLines(lines);
+    setVisibleLines(nextVisibleLines);
   };
 
   // Simple line class based on content prefix
@@ -97,7 +109,7 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
         <h3 className="text-lg font-medium">File Comparison</h3>
         <Button
           onClick={onCompare}
-          disabled={!file1 || !file2}
+          disabled={!file1 || !file2} // Note: This button will not have the loading state
           className="flex items-center space-x-2"
         >
           <ArrowLeftRight className="h-4 w-4 mr-2" />
@@ -136,19 +148,19 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
               <div className="flex items-center space-x-2">
                 <div className="h-3 w-3 rounded-full bg-added"></div>
                 <span className="text-sm text-muted-foreground">
-                  {result.added.length} Added
+                  {addedTable.length} Added
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="h-3 w-3 rounded-full bg-deleted"></div>
                 <span className="text-sm text-muted-foreground">
-                  {result.deleted.length} Deleted
+                  {deletedTable.length} Deleted
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="h-3 w-3 rounded-full bg-changed"></div>
                 <span className="text-sm text-muted-foreground">
-                  {result.changed.length} Changed
+                  {changedTable.length} Changed
                 </span>
               </div>
             </div>
@@ -170,25 +182,22 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
               <TabsTrigger value="deleted">Deleted</TabsTrigger>
               <TabsTrigger value="changed">Changed</TabsTrigger>
             </TabsList>
-            <TabsContent value={activeTab} className="mt-4">
-              <div className="bg-muted/30 p-2 rounded-lg overflow-auto max-h-96">
-                <pre className="text-xs font-mono">
-                  {visibleLines.length > 0 ? (
-                    visibleLines.map((line, index) => (
-                      <div 
-                        key={index} 
-                        className={`px-2 py-0.5 ${getLineClass(line)}`}
-                      >
-                        {line}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-muted-foreground">
-                      No differences to display for the selected filter
-                    </div>
-                  )}
-                </pre>
-              </div>
+            <TabsContent value="all" className="mt-4">
+              {addedTable.length > 0 && <><div className="font-bold mb-1">Added</div><FileTable data={addedTable} /></>}
+              {deletedTable.length > 0 && <><div className="font-bold mb-1">Deleted</div><FileTable data={deletedTable} /></>}
+              {changedTable.length > 0 && <><div className="font-bold mb-1">Changed</div><FileTable data={changedTable} /></>}
+              {addedTable.length === 0 && deletedTable.length === 0 && changedTable.length === 0 && (
+                <div className="p-4 text-center text-muted-foreground">No differences to display</div>
+              )}
+            </TabsContent>
+            <TabsContent value="added" className="mt-4">
+              {addedTable.length > 0 ? <FileTable data={addedTable} /> : <div className="p-4 text-center text-muted-foreground">No added components</div>}
+            </TabsContent>
+            <TabsContent value="deleted" className="mt-4">
+              {deletedTable.length > 0 ? <FileTable data={deletedTable} /> : <div className="p-4 text-center text-muted-foreground">No deleted components</div>}
+            </TabsContent>
+            <TabsContent value="changed" className="mt-4">
+              {changedTable.length > 0 ? <FileTable data={changedTable} /> : <div className="p-4 text-center text-muted-foreground">No changed components</div>}
             </TabsContent>
           </Tabs>
         </div>

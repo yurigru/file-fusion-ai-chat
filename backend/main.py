@@ -32,10 +32,12 @@ def parse_bom_xml(xml_content: str) -> Dict[str, Dict[str, str]]:
         # Use Reference as key for easy comparison
         components[ref] = {
             "Reference": ref,
-            "Value": value,
-            "Manufacturer": manufacturer,
-            "PartNumber": part_number
-        }
+        "Value": value,
+        "Manufacturer": manufacturer,
+        "PartNumber": part_number,
+        "Description": comp.findtext("Description", "").strip(), # Include Description
+        "NUMBER": comp.findtext("NUMBER", "").strip() # Include NUMBER
+    }
     return components
 
 @app.post("/compare-bom")
@@ -61,7 +63,9 @@ async def compare_bom(
             if (
                 old_comp["Value"] != new_comp["Value"] or
                 old_comp["Manufacturer"] != new_comp["Manufacturer"] or
-                old_comp["PartNumber"] != new_comp["PartNumber"]
+                old_comp["PartNumber"] != new_comp["PartNumber"] or
+                old_comp["Description"] != new_comp["Description"] or # Include Description in comparison
+                old_comp["NUMBER"] != new_comp["NUMBER"] # Include NUMBER in comparison
             ):
                 changed.append({
                     "Reference": ref,

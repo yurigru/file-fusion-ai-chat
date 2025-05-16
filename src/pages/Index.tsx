@@ -10,6 +10,7 @@ import FileTable from "@/components/FileTable";
 import BOMCompare from "@/components/BOMCompare";
 import { UploadedFile, ComparisonFiles, ComparisonResult, ElectronicComponent, NetlistConnection } from "@/types";
 import { toast } from "@/components/ui/sonner";
+import { ArrowLeftRight, Plus, Minus, Check, RefreshCw } from "lucide-react"; // Import RefreshCw
 
 const Index = () => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -24,6 +25,7 @@ const Index = () => {
   const [connections, setConnections] = useState<NetlistConnection[]>([]);
   const [fileType, setFileType] = useState<"bom" | "netlist" | null>(null);
   const [tablePreview, setTablePreview] = useState<string[][] | null>(null);
+  const [isComparing, setIsComparing] = useState(false); // Add isComparing state
 
   useEffect(() => {
     // When two files are selected, automatically set them as comparison files
@@ -161,6 +163,8 @@ const Index = () => {
       return;
     }
 
+    setIsComparing(true); // Set loading state
+
     // If both files are .xml, use FastAPI for BOM comparison
     if (
       comparisonFiles.file1.name.toLowerCase().endsWith('.xml') &&
@@ -182,11 +186,14 @@ const Index = () => {
       formData.append("old_file", oldFile);
       formData.append("new_file", newFile);
       try {
-        const response = await fetch("http://localhost:8000/compare-bom", {
+        const response = await fetch("http://127.0.0.1:8000/compare-bom", {
           method: "POST",
           body: formData,
         });
-        if (!response.ok) throw new Error("Comparison failed");
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || "BOM comparison failed");
+        }
         const data = await response.json();
         setComparisonFiles({
           ...comparisonFiles,
@@ -198,15 +205,52 @@ const Index = () => {
               original: JSON.stringify(chg.Old),
               modified: JSON.stringify(chg.New),
             })),
+            addedComponents: data.added.map(comp => ({
+              id: comp.Reference,
+              reference: comp.Reference,
+              value: comp.Value,
+              quantity: 1, // Assuming quantity is always 1 for added components in this context
+              description: comp.Description,
+              manufacturer: comp.Manufacturer,
+              partNumber: comp.PartNumber,
+            })),
+            deletedComponents: data.removed.map(comp => ({
+              id: comp.Reference,
+              reference: comp.Reference,
+              value: comp.Value,
+              quantity: 1, // Assuming quantity is always 1 for deleted components in this context
+              description: comp.Description,
+              manufacturer: comp.Manufacturer,
+              partNumber: comp.PartNumber,
+            })),
+            changedComponents: data.changed.map(chg => ({
+              id: chg.Reference,
+              reference: chg.Reference,
+              original: {
+                reference: chg.Old.Reference,
+                value: chg.Old.Value,
+                description: chg.Old.Description,
+                manufacturer: chg.Old.Manufacturer,
+                partNumber: chg.Old.PartNumber,
+              },
+              modified: {
+                reference: chg.New.Reference,
+                value: chg.New.Value,
+                description: chg.New.Description,
+                manufacturer: chg.New.Manufacturer,
+                partNumber: chg.New.PartNumber,
+              },
+            })),
           },
         });
         setActiveTab("compare");
         toast.success("Comparison completed (BOM via FastAPI)");
-        return;
-      } catch (err) {
-        toast.error("BOM comparison failed");
-        return;
+      } catch (err: any) {
+        toast.error(`BOM comparison failed: ${err.message}`);
+      } finally {
+        setIsComparing(false); // Reset loading state
       }
+      return;
     }
 
     // Fallback: mock comparison for UI prototype
@@ -350,25 +394,12 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="compare" className="space-y-4">
-                {/* Only show BOMCompare if both selected files are .xml (BOM) */}
-                {selectedFiles.length === 2 &&
-                  selectedFiles.every(f => f.name.toLowerCase().endsWith('.xml')) && (() => {
-                    // Reconstruct File objects from UploadedFile content for BOMCompare
-                    const [file1, file2] = selectedFiles;
-                    const oldFile = new File([file1.content], file1.name, { type: file1.type, lastModified: file1.lastModified });
-                    const newFile = new File([file2.content], file2.name, { type: file2.type, lastModified: file2.lastModified });
-                    return <BOMCompare oldFile={oldFile} newFile={newFile} />;
-                  })()}
-                {fileType ? (
-                  <SchematicComparison
-                    comparisonFiles={comparisonFiles}
-                    onCompare={handleCompare}
-                  />
-                ) : (
-                  <FileComparison
-                    comparisonFiles={comparisonFiles}
-                    onCompare={handleCompare}
-                  />
+                <FileComparison comparisonFiles={comparisonFiles} onCompare={handleCompare} />
+                {fileType === "bom" && (
+                  <BOMCompare comparisonResult={comparisonFiles.result} />
+                )}
+                {fileType === "netlist" && (
+                  <SchematicComparison comparisonFiles={comparisonFiles} onCompare={handleCompare} />
                 )}
               </TabsContent>
             </Tabs>
