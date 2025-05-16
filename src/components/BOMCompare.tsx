@@ -53,7 +53,7 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
           <ul className="list-disc ml-6">
             {changedComponents.map((chg, i) => (
               <li key={i}>
-                {chg.reference}: Old [ {chg.original.Value} | {chg.original.Manufacturer} | {chg.original.PartNumber} ] → New [ {chg.modified.Value} | {chg.modified.Manufacturer} | {chg.modified.PartNumber} ]
+                {chg.reference}: Old [ {chg.original.value} | {chg.original.manufacturer} | {chg.original.partNumber} ] → New [ {chg.modified.value} | {chg.modified.manufacturer} | {chg.modified.partNumber} ]
               </li>
             ))}
           </ul>
