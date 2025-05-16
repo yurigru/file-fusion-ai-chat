@@ -1,12 +1,14 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, RefreshCw } from "lucide-react";
+import { Send, Bot, User, RefreshCw, Server, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import ModelSelector from "./ModelSelector";
-import { OllamaModel, ChatMessage, ComparisonResult, UploadedFile } from "@/types";
+import { OllamaModel, ChatMessage, ComparisonResult, UploadedFile, ServerConfig, MCPTool } from "@/types";
+import { toast } from "@/components/ui/sonner";
 
 interface AIChatProps {
   selectedFile: UploadedFile | null;
@@ -15,10 +17,48 @@ interface AIChatProps {
 }
 
 const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) => {
-  const [model, setModel] = useState<OllamaModel>("llama3");
+  const [model, setModel] = useState<OllamaModel | string>("llama3");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [serverConfig, setServerConfig] = useState<ServerConfig>({
+    type: "ollama",
+    modelName: "llama3",
+    ollamaUrl: "http://localhost:11434",
+    mcpConfig: {
+      url: "http://localhost:8080",
+      serverType: "local",
+      contextSize: 4096,
+      maxTokens: 1024,
+      tools: [
+        { 
+          id: "web-search", 
+          name: "Web Search", 
+          description: "Search the web for information", 
+          enabled: true 
+        },
+        { 
+          id: "file-analyzer", 
+          name: "File Analyzer", 
+          description: "Analyze BOM and netlist files", 
+          enabled: true 
+        },
+        { 
+          id: "schema-validator", 
+          name: "Schema Validator", 
+          description: "Validate electronic schematics", 
+          enabled: false 
+        },
+        { 
+          id: "component-lookup", 
+          name: "Component Lookup", 
+          description: "Look up electronic component information", 
+          enabled: false 
+        },
+      ]
+    }
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,8 +93,12 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleModelChange = (newModel: OllamaModel) => {
+  const handleModelChange = (newModel: OllamaModel | string) => {
     setModel(newModel);
+  };
+
+  const handleServerConfigChange = (config: ServerConfig) => {
+    setServerConfig(config);
   };
 
   const handleSendMessage = () => {
@@ -71,12 +115,24 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI response (will be replaced with actual Ollama API call later)
+    // Simulate AI response based on server configuration
+    // In a real implementation, this would call the appropriate API
     setTimeout(() => {
+      let responseText = "";
+      
+      if (serverConfig.type === "ollama") {
+        responseText = `[Ollama: ${serverConfig.modelName}] This is a simulated response using the Ollama model. In a real implementation, this would connect to the Ollama API at ${serverConfig.ollamaUrl}.`;
+      } else {
+        // Get active tools
+        const activeTools = serverConfig.mcpConfig?.tools.filter(t => t.enabled) || [];
+        
+        responseText = `[MCP: ${serverConfig.mcpConfig?.serverType}] This is a simulated response using the MCP server at ${serverConfig.mcpConfig?.url}. Using ${activeTools.length} active tools: ${activeTools.map(t => t.name).join(", ")}.`;
+      }
+
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
-        content: "This is a simulated response. In the future, this will connect to the Ollama API for real AI responses based on your files and comparison data.",
+        content: responseText,
         timestamp: Date.now()
       };
 
@@ -94,6 +150,12 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
 
   const resetChat = () => {
     setMessages([]);
+    toast.success("Chat history cleared");
+  };
+
+  const getActiveTools = (): MCPTool[] => {
+    if (serverConfig.type !== "mcp" || !serverConfig.mcpConfig) return [];
+    return serverConfig.mcpConfig.tools.filter(tool => tool.enabled);
   };
 
   return (
@@ -104,13 +166,42 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
             <Bot className="mr-2 h-5 w-5" />
             AI Assistant
           </CardTitle>
-          <Button variant="outline" size="icon" onClick={resetChat}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => setShowSettings(!showSettings)}
+              className={showSettings ? "bg-accent" : ""}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={resetChat}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <div className="mt-2">
-          <ModelSelector selectedModel={model} onModelChange={handleModelChange} />
-        </div>
+        {showSettings && (
+          <div className="mt-2 space-y-2">
+            <ModelSelector 
+              selectedModel={model} 
+              onModelChange={handleModelChange} 
+              serverConfig={serverConfig}
+              onServerConfigChange={handleServerConfigChange}
+            />
+            
+            {serverConfig.type === "mcp" && getActiveTools().length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {getActiveTools().map(tool => (
+                  <Badge key={tool.id} variant="secondary" className="flex items-center">
+                    <span className="mr-1">
+                      {tool.name}
+                    </span>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="flex flex-col p-0 flex-1">
         <ScrollArea className="flex-1 p-4">
@@ -126,6 +217,17 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
                       ? "Ask questions about the comparison results"
                       : "Select a file or compare files to start a conversation"}
                 </p>
+                {serverConfig.type === "mcp" && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center justify-center">
+                      <Server className="h-3 w-3 mr-1" />
+                      <span>Connected to MCP Server: {serverConfig.mcpConfig?.url}</span>
+                    </div>
+                    <div className="mt-1">
+                      {getActiveTools().length} tools enabled
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

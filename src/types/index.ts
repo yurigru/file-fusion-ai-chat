@@ -77,3 +77,30 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
 }
+
+// MCP (Model Context Protocol) related types
+export type MCPServerType = "local" | "remote" | "custom";
+
+export interface MCPTool {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  config?: Record<string, any>;
+}
+
+export interface MCPServerConfig {
+  url: string;
+  apiKey?: string;
+  serverType: MCPServerType;
+  contextSize?: number;
+  maxTokens?: number;
+  tools: MCPTool[];
+}
+
+export interface ServerConfig {
+  type: "ollama" | "mcp";
+  modelName: string;
+  mcpConfig?: MCPServerConfig;
+  ollamaUrl?: string;
+}
