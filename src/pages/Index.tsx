@@ -11,6 +11,7 @@ import BOMCompare from "@/components/BOMCompare";
 import { UploadedFile, ComparisonFiles, ComparisonResult, ElectronicComponent, NetlistConnection } from "@/types";
 import { toast } from "@/components/ui/sonner";
 import { ArrowLeftRight, Plus, Minus, Check, RefreshCw } from "lucide-react"; // Import RefreshCw
+import { XMLParser } from 'fast-xml-parser'; // Use fast-xml-parser instead of xml2js
 
 const Index = () => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -24,7 +25,7 @@ const Index = () => {
   const [components, setComponents] = useState<ElectronicComponent[]>([]);
   const [connections, setConnections] = useState<NetlistConnection[]>([]);
   const [fileType, setFileType] = useState<"bom" | "netlist" | null>(null);
-  const [tablePreview, setTablePreview] = useState<string[][] | null>(null);
+  const [tablePreview, setTablePreview] = useState<any[] | null>(null);
   const [isComparing, setIsComparing] = useState(false); // Add isComparing state
 
   useEffect(() => {
@@ -53,15 +54,35 @@ const Index = () => {
     if (selectedFiles.length === 1) {
       const file = selectedFiles[0];
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
-      let data: string[][] = [];
-      if (ext === "csv" || ext === "xml") { // .xml for BOM
-        data = file.content.split('\n').map(row => row.split(','));
+      if (ext === "xml") {
+        try {
+          const parser = new XMLParser();
+          const result = parser.parse(file.content);
+          // Try to find <DETAILS><RECORD>
+          const records = result?.BOM?.DETAILS?.RECORD || [];
+          // If RECORD is a single object, wrap in array
+          const recordArray = Array.isArray(records) ? records : [records];
+          const rows = recordArray.map((rec: any) => ({
+            PartNumber: rec["PART-NUM"] || "",
+            QTY: rec["QTY"] || "",
+            REFDES: rec["REFDES"] || "",
+            PACKAGE: rec["PACKAGE"] || "",
+            OPT: rec["OPT"] || "",
+            DESCRIPTION: rec["DESCRIPTION"] || "",
+          }));
+          setTablePreview(rows);
+        } catch (err) {
+          setTablePreview([]);
+        }
+      } else if (ext === "csv") {
+        const data = file.content.split('\n').map(row => row.split(','));
+        setTablePreview(data);
       } else if (ext === "net") {
-        data = file.content.split('\n').map(row => [row]);
+        const data = file.content.split('\n').map(row => [row]);
+        setTablePreview(data);
       } else {
-        data = [["Preview not available for this file type."]];
+        setTablePreview([]);
       }
-      setTablePreview(data);
     } else {
       setTablePreview(null);
     }
@@ -340,6 +361,12 @@ const Index = () => {
     
     setConnections(mockConnections);
   };
+
+  // Add this before the return statement
+  if (tablePreview) {
+    // eslint-disable-next-line no-console
+    console.log('[FileTable Preview] tablePreview:', tablePreview);
+  }
 
   return (
     <div className="container mx-auto py-8 max-w-6xl">

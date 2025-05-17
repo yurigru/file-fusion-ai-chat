@@ -24,20 +24,40 @@ def parse_bom_xml(xml_content: str) -> Dict[str, Dict[str, str]]:
     tree = ET.ElementTree(ET.fromstring(xml_content))
     root = tree.getroot()
     components = {}
+    # Try to find <DETAILS><RECORD> structure first
+    details = root.find(".//DETAILS")
+    if details is not None:
+        for record in details.findall("RECORD"):
+            ref = record.findtext("REFDES", "").strip()
+            if ref:
+                components[ref] = {
+                    "CORP-NUM": record.findtext("CORP-NUM", "").strip(),
+                    "DESCRIPTION": record.findtext("DESCRIPTION", "").strip(),
+                    "NUMBER": record.findtext("NUMBER", "").strip(),
+                    "OPT": record.findtext("OPT", "").strip(),
+                    "PACKAGE": record.findtext("PACKAGE", "").strip(),
+                    "PART-NAME": record.findtext("PART-NAME", "").strip(),
+                    "PART-NUM": record.findtext("PART-NUM", "").strip(),
+                    "QTY": record.findtext("QTY", "").strip(),
+                    "REFDES": ref
+                }
+        if components:
+            return components
+    # Fallback to <Component> structure
     for comp in root.findall(".//Component"):
         ref = comp.findtext("Reference", "").strip()
-        value = comp.findtext("Value", "").strip()
-        manufacturer = comp.findtext("Manufacturer", "").strip()
-        part_number = comp.findtext("PartNumber", "").strip()
-        # Use Reference as key for easy comparison
-        components[ref] = {
-            "Reference": ref,
-        "Value": value,
-        "Manufacturer": manufacturer,
-        "PartNumber": part_number,
-        "Description": comp.findtext("Description", "").strip(), # Include Description
-        "NUMBER": comp.findtext("NUMBER", "").strip() # Include NUMBER
-    }
+        if ref:
+            components[ref] = {
+                "CORP-NUM": comp.findtext("Manufacturer", "").strip(),
+                "DESCRIPTION": comp.findtext("Description", "").strip(),
+                "NUMBER": comp.findtext("NUMBER", "").strip(),
+                "OPT": "",
+                "PACKAGE": "",
+                "PART-NAME": "",
+                "PART-NUM": comp.findtext("PartNumber", "").strip(),
+                "QTY": comp.findtext("Value", "").strip(),
+                "REFDES": ref
+            }
     return components
 
 @app.post("/compare-bom")
@@ -54,23 +74,24 @@ async def compare_bom(
     removed = []
     changed = []
 
+    def key_fields(part):
+        return (
+            part.get("REFDES", ""),
+            part.get("QTY", ""),
+            part.get("CORP-NUM", ""),
+            part.get("PART-NUM", "")
+        )
+
     for ref, new_comp in new_components.items():
         if ref not in old_components:
             added.append(new_comp)
         else:
             old_comp = old_components[ref]
-            # Compare relevant fields
-            if (
-                old_comp["Value"] != new_comp["Value"] or
-                old_comp["Manufacturer"] != new_comp["Manufacturer"] or
-                old_comp["PartNumber"] != new_comp["PartNumber"] or
-                old_comp["Description"] != new_comp["Description"] or # Include Description in comparison
-                old_comp["NUMBER"] != new_comp["NUMBER"] # Include NUMBER in comparison
-            ):
+            if key_fields(old_comp) != key_fields(new_comp):
                 changed.append({
-                    "Reference": ref,
-                    "Old": old_comp,
-                    "New": new_comp
+                    "REFDES": ref,
+                    "Original": old_comp,
+                    "Modified": new_comp
                 })
     for ref, old_comp in old_components.items():
         if ref not in new_components:
@@ -79,5 +100,8 @@ async def compare_bom(
     return {
         "added": added,
         "removed": removed,
-        "changed": changed
+        "changed": changed,
+        "addedComponents": added,
+        "deletedComponents": removed,
+        "changedComponents": changed
     }
