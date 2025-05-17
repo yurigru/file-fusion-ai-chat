@@ -58,16 +58,25 @@ const Index = () => {
         try {
           const parser = new XMLParser();
           const result = parser.parse(file.content);
-          // Try to find <DETAILS><RECORD>
-          const records = result?.BOM?.DETAILS?.RECORD || [];
-          // If RECORD is a single object, wrap in array
+          console.log('[fast-xml-parser] parsed result:', result);
+          // Support both <BOM> and <SHOWSRVCALLS> roots
+          let details = result?.BOM?.DETAILS || result?.SHOWSRVCALLS?.DETAILS;
+          let records = details?.RECORD;
+          if (!records && Array.isArray(details)) {
+            // Sometimes DETAILS is an array
+            records = details.flatMap((d: any) => d.RECORD || []);
+          }
+          if (!records) records = [];
           const recordArray = Array.isArray(records) ? records : [records];
-          const rows = recordArray.map((rec: any) => ({
+          // Filter out empty objects
+          const rows = recordArray.filter(r => r && typeof r === 'object').map((rec: any) => ({
+            NUMBER: rec["NUMBER"] || "",
             PartNumber: rec["PART-NUM"] || "",
             QTY: rec["QTY"] || "",
             REFDES: rec["REFDES"] || "",
             PACKAGE: rec["PACKAGE"] || "",
             OPT: rec["OPT"] || "",
+            PARTNAME: rec["PART-NAME"] || "",
             DESCRIPTION: rec["DESCRIPTION"] || "",
           }));
           setTablePreview(rows);
@@ -223,43 +232,43 @@ const Index = () => {
             deleted: data.removed.map((_, i) => i.toString()),
             changed: data.changed.map((chg, i) => ({
               line: i,
-              original: JSON.stringify(chg.Old),
-              modified: JSON.stringify(chg.New),
+              original: JSON.stringify(chg.Original),
+              modified: JSON.stringify(chg.Modified),
             })),
             addedComponents: data.added.map(comp => ({
-              id: comp.Reference,
-              reference: comp.Reference,
-              value: comp.Value,
-              quantity: 1, // Assuming quantity is always 1 for added components in this context
-              description: comp.Description,
-              manufacturer: comp.Manufacturer,
-              partNumber: comp.PartNumber,
+              PartNumber: comp.PartNumber || comp["PartNumber"] || "",
+              QTY: comp.Quantity || comp["QTY"] || "",
+              REFDES: comp.Reference || comp["REFDES"] || "",
+              PACKAGE: comp.Package || comp["PACKAGE"] || "",
+              OPT: comp.Opt || comp["OPT"] || "",
+              DESCRIPTION: comp.Description || comp["DESCRIPTION"] || "",
             })),
             deletedComponents: data.removed.map(comp => ({
-              id: comp.Reference,
-              reference: comp.Reference,
-              value: comp.Value,
-              quantity: 1, // Assuming quantity is always 1 for deleted components in this context
-              description: comp.Description,
-              manufacturer: comp.Manufacturer,
-              partNumber: comp.PartNumber,
+              PartNumber: comp.PartNumber || comp["PartNumber"] || "",
+              QTY: comp.Quantity || comp["QTY"] || "",
+              REFDES: comp.Reference || comp["REFDES"] || "",
+              PACKAGE: comp.Package || comp["PACKAGE"] || "",
+              OPT: comp.Opt || comp["OPT"] || "",
+              DESCRIPTION: comp.Description || comp["DESCRIPTION"] || "",
             })),
             changedComponents: data.changed.map(chg => ({
               id: chg.Reference,
               reference: chg.Reference,
               original: {
-                reference: chg.Old.Reference,
-                value: chg.Old.Value,
-                description: chg.Old.Description,
-                manufacturer: chg.Old.Manufacturer,
-                partNumber: chg.Old.PartNumber,
+                PartNumber: chg.Original.PartNumber || chg.Original["PartNumber"] || "",
+                QTY: chg.Original.Quantity || chg.Original["QTY"] || "",
+                REFDES: chg.Original.Reference || chg.Original["REFDES"] || "",
+                PACKAGE: chg.Original.Package || chg.Original["PACKAGE"] || "",
+                OPT: chg.Original.Opt || chg.Original["OPT"] || "",
+                DESCRIPTION: chg.Original.Description || chg.Original["DESCRIPTION"] || "",
               },
               modified: {
-                reference: chg.New.Reference,
-                value: chg.New.Value,
-                description: chg.New.Description,
-                manufacturer: chg.New.Manufacturer,
-                partNumber: chg.New.PartNumber,
+                PartNumber: chg.Modified.PartNumber || chg.Modified["PartNumber"] || "",
+                QTY: chg.Modified.Quantity || chg.Modified["QTY"] || "",
+                REFDES: chg.Modified.Reference || chg.Modified["REFDES"] || "",
+                PACKAGE: chg.Modified.Package || chg.Modified["PACKAGE"] || "",
+                OPT: chg.Modified.Opt || chg.Modified["OPT"] || "",
+                DESCRIPTION: chg.Modified.Description || chg.Modified["DESCRIPTION"] || "",
               },
             })),
           },

@@ -60,6 +60,18 @@ def parse_bom_xml(xml_content: str) -> Dict[str, Dict[str, str]]:
             }
     return components
 
+def format_part(part):
+    return {
+        "Reference": part.get("REFDES", ""),
+        "PartNumber": part.get("PART-NUM", ""),
+        "Quantity": part.get("QTY", ""),
+        "Opt": part.get("OPT", ""),
+        "Description": part.get("DESCRIPTION", ""),
+        "Package": part.get("PACKAGE", ""),
+        "PartName": part.get("PART-NAME", ""),
+        "Number": part.get("NUMBER", "")
+    }
+
 @app.post("/compare-bom")
 async def compare_bom(
     old_file: UploadFile = File(...),
@@ -84,18 +96,18 @@ async def compare_bom(
 
     for ref, new_comp in new_components.items():
         if ref not in old_components:
-            added.append(new_comp)
+            added.append(format_part(new_comp))
         else:
             old_comp = old_components[ref]
             if key_fields(old_comp) != key_fields(new_comp):
                 changed.append({
-                    "REFDES": ref,
-                    "Original": old_comp,
-                    "Modified": new_comp
+                    "Reference": ref,
+                    "Original": format_part(old_comp),
+                    "Modified": format_part(new_comp)
                 })
     for ref, old_comp in old_components.items():
         if ref not in new_components:
-            removed.append(old_comp)
+            removed.append(format_part(old_comp))
 
     return {
         "added": added,
