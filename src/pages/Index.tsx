@@ -424,7 +424,16 @@ const Index = () => {
                 {tablePreview && (
                   <div className="mt-6">
                     <h2 className="text-lg font-semibold mb-2">File Table Preview</h2>
-                    <FileTable data={tablePreview} />
+                    <FileTable 
+                      data={tablePreview} 
+                      columns={[
+                        { header: "Reference", accessor: "REFDES" },
+                        { header: "Part Number", accessor: "PartNumber" },
+                        { header: "Quantity", accessor: "QTY" },
+                        { header: "Package", accessor: "PACKAGE" },
+                        { header: "Description", accessor: "DESCRIPTION" }
+                      ]}
+                    />
                   </div>
                 )}
               </TabsContent>

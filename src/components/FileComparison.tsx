@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { ComparisonFiles } from "@/types";
+import { ComparisonFiles, ComparisonResult } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeftRight } from "lucide-react";
