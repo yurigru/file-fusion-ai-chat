@@ -1,3 +1,4 @@
+
 import React from "react";
 import { ComparisonResult, ElectronicComponent } from "@/types"; // Import necessary types
 
