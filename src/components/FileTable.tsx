@@ -1,27 +1,20 @@
+
 import React, { useMemo, useState } from "react";
 
-const COLUMN_HEADERS = [
-  { key: "PartNumber", label: "Part Number" },
-  { key: "QTY", label: "Quantity" },
-  { key: "REFDES", label: "Reference Designators" },
-  { key: "PACKAGE", label: "PACKAGE" },
-  { key: "OPT", label: "OPT" },
-  { key: "DESCRIPTION", label: "DESCRIPTION" },
-];
-
-interface BOMRow {
-  [key: string]: string;
+export interface Column {
+  header: string;
+  accessor: string;
 }
 
-interface FileTableProps {
-  data: BOMRow[];
+export interface FileTableProps {
+  columns: Column[];
+  data: Array<{ [key: string]: string }>;
 }
 
-const FileTable: React.FC<FileTableProps> = ({ data }) => {
+const FileTable: React.FC<FileTableProps> = ({ columns, data }) => {
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<string>(COLUMN_HEADERS[0].key);
+  const [sortKey, setSortKey] = useState<string>(columns[0]?.accessor || "");
   const [sortAsc, setSortAsc] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Error/fallback for empty or invalid data
   if (!Array.isArray(data) || data.length === 0) {
@@ -31,11 +24,11 @@ const FileTable: React.FC<FileTableProps> = ({ data }) => {
   try {
     const filtered = useMemo(() => {
       return data.filter(row =>
-        COLUMN_HEADERS.some(col =>
-          (row[col.key] || "").toLowerCase().includes(search.toLowerCase())
+        columns.some(col =>
+          (row[col.accessor] || "").toLowerCase().includes(search.toLowerCase())
         )
       );
-    }, [data, search]);
+    }, [data, search, columns]);
 
     const sorted = useMemo(() => {
       return [...filtered].sort((a, b) => {
@@ -60,16 +53,16 @@ const FileTable: React.FC<FileTableProps> = ({ data }) => {
         <table className="min-w-full border text-sm">
           <thead>
             <tr>
-              {COLUMN_HEADERS.map(col => (
+              {columns.map(col => (
                 <th
-                  key={col.key}
+                  key={col.accessor}
                   className="border px-2 py-1 cursor-pointer select-none"
                   onClick={() => {
-                    if (sortKey === col.key) setSortAsc(a => !a);
-                    else { setSortKey(col.key); setSortAsc(true); }
+                    if (sortKey === col.accessor) setSortAsc(a => !a);
+                    else { setSortKey(col.accessor); setSortAsc(true); }
                   }}
                 >
-                  {col.label} {sortKey === col.key ? (sortAsc ? "▲" : "▼") : ""}
+                  {col.header} {sortKey === col.accessor ? (sortAsc ? "▲" : "▼") : ""}
                 </th>
               ))}
             </tr>
@@ -77,8 +70,8 @@ const FileTable: React.FC<FileTableProps> = ({ data }) => {
           <tbody>
             {sorted.map((row, i) => (
               <tr key={i}>
-                {COLUMN_HEADERS.map(col => (
-                  <td key={col.key} className="border px-2 py-1">{row[col.key] || ""}</td>
+                {columns.map(col => (
+                  <td key={col.accessor} className="border px-2 py-1">{row[col.accessor] || ""}</td>
                 ))}
               </tr>
             ))}
