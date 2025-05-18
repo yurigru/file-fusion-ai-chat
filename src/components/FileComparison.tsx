@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ComparisonFiles, ComparisonResult, UploadedFile } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -13,9 +14,9 @@ interface FileComparisonProps {
 const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => {
   const [activeTab, setActiveTab] = useState("all");
   const [visibleLines, setVisibleLines] = useState<string[]>([]);
-  const [addedTable, setAddedTable] = useState<string[][]>([]);
-  const [deletedTable, setDeletedTable] = useState<string[][]>([]);
-  const [changedTable, setChangedTable] = useState<string[][]>([]);
+  const [addedTableData, setAddedTableData] = useState<Array<{ [key: string]: string }>>([]);
+  const [deletedTableData, setDeletedTableData] = useState<Array<{ [key: string]: string }>>([]);
+  const [changedTableData, setChangedTableData] = useState<Array<{ [key: string]: string }>>([]);
   
   const { file1, file2, result } = comparisonFiles;
 
@@ -29,19 +30,63 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
     if (result && file1 && file2) {
       // If both files are .xml and backend result is present, parse backend data for tables
       const isXML = file1.name.toLowerCase().endsWith('.xml') && file2.name.toLowerCase().endsWith('.xml');
-      if (isXML && result.added && result.deleted && result.changed) {
-        // Parse backend result (JSON stringified objects)
-        const parseComp = (comp: any) => [comp.Reference, comp.Value, comp.Manufacturer, comp.PartNumber];
-        setAddedTable(result.addedComponents ? result.addedComponents.map(comp => [comp.reference, comp.value, comp.manufacturer, comp.partNumber]) : []);
-        setDeletedTable(result.deletedComponents ? result.deletedComponents.map(comp => [comp.reference, comp.value, comp.manufacturer, comp.partNumber]) : []);
-        setChangedTable(result.changedComponents ? result.changedComponents.map(chg => [chg.reference, chg.original.value, chg.modified.value, chg.original.manufacturer, chg.modified.manufacturer, chg.original.partNumber, chg.modified.partNumber]) : []);
+      if (isXML) {
+        formatTableData(result);
       } else {
-        setAddedTable([]);
-        setDeletedTable([]);
-        setChangedTable([]);
+        resetTableData();
       }
     }
   }, [result, file1, file2]);
+
+  const resetTableData = () => {
+    setAddedTableData([]);
+    setDeletedTableData([]);
+    setChangedTableData([]);
+  };
+
+  const formatTableData = (result: ComparisonResult) => {
+    // Format added components for FileTable
+    if (result.addedComponents && result.addedComponents.length > 0) {
+      const formattedAdded = result.addedComponents.map(comp => ({
+        reference: comp.reference || '',
+        value: comp.value || '',
+        manufacturer: comp.manufacturer || '',
+        partNumber: comp.partNumber || ''
+      }));
+      setAddedTableData(formattedAdded);
+    } else {
+      setAddedTableData([]);
+    }
+    
+    // Format deleted components for FileTable
+    if (result.deletedComponents && result.deletedComponents.length > 0) {
+      const formattedDeleted = result.deletedComponents.map(comp => ({
+        reference: comp.reference || '',
+        value: comp.value || '',
+        manufacturer: comp.manufacturer || '',
+        partNumber: comp.partNumber || ''
+      }));
+      setDeletedTableData(formattedDeleted);
+    } else {
+      setDeletedTableData([]);
+    }
+    
+    // Format changed components for FileTable
+    if (result.changedComponents && result.changedComponents.length > 0) {
+      const formattedChanged = result.changedComponents.map(change => ({
+        reference: change.reference || '',
+        originalValue: change.original.value || '',
+        newValue: change.modified.value || '',
+        originalManufacturer: change.original.manufacturer || '',
+        newManufacturer: change.modified.manufacturer || '',
+        originalPartNumber: change.original.partNumber || '',
+        newPartNumber: change.modified.partNumber || ''
+      }));
+      setChangedTableData(formattedChanged);
+    } else {
+      setChangedTableData([]);
+    }
+  };
 
   const updateVisibleLines = () => {
     if (!result) return;
@@ -109,7 +154,7 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
         <h3 className="text-lg font-medium">File Comparison</h3>
         <Button
           onClick={onCompare}
-          disabled={!file1 || !file2} // Note: This button will not have the loading state
+          disabled={!file1 || !file2}
           className="flex items-center space-x-2"
         >
           <ArrowLeftRight className="h-4 w-4 mr-2" />
@@ -148,19 +193,19 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
               <div className="flex items-center space-x-2">
                 <div className="h-3 w-3 rounded-full bg-added"></div>
                 <span className="text-sm text-muted-foreground">
-                  {addedTable.length} Added
+                  {addedTableData.length} Added
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="h-3 w-3 rounded-full bg-deleted"></div>
                 <span className="text-sm text-muted-foreground">
-                  {deletedTable.length} Deleted
+                  {deletedTableData.length} Deleted
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="h-3 w-3 rounded-full bg-changed"></div>
                 <span className="text-sm text-muted-foreground">
-                  {changedTable.length} Changed
+                  {changedTableData.length} Changed
                 </span>
               </div>
             </div>
@@ -183,21 +228,102 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
               <TabsTrigger value="changed">Changed</TabsTrigger>
             </TabsList>
             <TabsContent value="all" className="mt-4">
-              {addedTable.length > 0 && <><div className="font-bold mb-1">Added</div><FileTable data={addedTable} /></>}
-              {deletedTable.length > 0 && <><div className="font-bold mb-1">Deleted</div><FileTable data={deletedTable} /></>}
-              {changedTable.length > 0 && <><div className="font-bold mb-1">Changed</div><FileTable data={changedTable} /></>}
-              {addedTable.length === 0 && deletedTable.length === 0 && changedTable.length === 0 && (
+              {addedTableData.length > 0 && (
+                <>
+                  <div className="font-bold mb-1">Added Components</div>
+                  <FileTable 
+                    columns={[
+                      { header: "Reference", accessor: "reference" },
+                      { header: "Value", accessor: "value" },
+                      { header: "Manufacturer", accessor: "manufacturer" },
+                      { header: "Part Number", accessor: "partNumber" }
+                    ]} 
+                    data={addedTableData} 
+                  />
+                </>
+              )}
+              {deletedTableData.length > 0 && (
+                <>
+                  <div className="font-bold mt-4 mb-1">Deleted Components</div>
+                  <FileTable 
+                    columns={[
+                      { header: "Reference", accessor: "reference" },
+                      { header: "Value", accessor: "value" },
+                      { header: "Manufacturer", accessor: "manufacturer" },
+                      { header: "Part Number", accessor: "partNumber" }
+                    ]} 
+                    data={deletedTableData} 
+                  />
+                </>
+              )}
+              {changedTableData.length > 0 && (
+                <>
+                  <div className="font-bold mt-4 mb-1">Changed Components</div>
+                  <FileTable 
+                    columns={[
+                      { header: "Reference", accessor: "reference" },
+                      { header: "Original Value", accessor: "originalValue" },
+                      { header: "New Value", accessor: "newValue" },
+                      { header: "Original Manufacturer", accessor: "originalManufacturer" },
+                      { header: "New Manufacturer", accessor: "newManufacturer" },
+                      { header: "Original Part Number", accessor: "originalPartNumber" },
+                      { header: "New Part Number", accessor: "newPartNumber" }
+                    ]} 
+                    data={changedTableData} 
+                  />
+                </>
+              )}
+              {addedTableData.length === 0 && deletedTableData.length === 0 && changedTableData.length === 0 && (
                 <div className="p-4 text-center text-muted-foreground">No differences to display</div>
               )}
             </TabsContent>
             <TabsContent value="added" className="mt-4">
-              {addedTable.length > 0 ? <FileTable data={addedTable} /> : <div className="p-4 text-center text-muted-foreground">No added components</div>}
+              {addedTableData.length > 0 ? (
+                <FileTable 
+                  columns={[
+                    { header: "Reference", accessor: "reference" },
+                    { header: "Value", accessor: "value" },
+                    { header: "Manufacturer", accessor: "manufacturer" },
+                    { header: "Part Number", accessor: "partNumber" }
+                  ]} 
+                  data={addedTableData} 
+                />
+              ) : (
+                <div className="p-4 text-center text-muted-foreground">No added components</div>
+              )}
             </TabsContent>
             <TabsContent value="deleted" className="mt-4">
-              {deletedTable.length > 0 ? <FileTable data={deletedTable} /> : <div className="p-4 text-center text-muted-foreground">No deleted components</div>}
+              {deletedTableData.length > 0 ? (
+                <FileTable 
+                  columns={[
+                    { header: "Reference", accessor: "reference" },
+                    { header: "Value", accessor: "value" },
+                    { header: "Manufacturer", accessor: "manufacturer" },
+                    { header: "Part Number", accessor: "partNumber" }
+                  ]} 
+                  data={deletedTableData} 
+                />
+              ) : (
+                <div className="p-4 text-center text-muted-foreground">No deleted components</div>
+              )}
             </TabsContent>
             <TabsContent value="changed" className="mt-4">
-              {changedTable.length > 0 ? <FileTable data={changedTable} /> : <div className="p-4 text-center text-muted-foreground">No changed components</div>}
+              {changedTableData.length > 0 ? (
+                <FileTable 
+                  columns={[
+                    { header: "Reference", accessor: "reference" },
+                    { header: "Original Value", accessor: "originalValue" },
+                    { header: "New Value", accessor: "newValue" },
+                    { header: "Original Manufacturer", accessor: "originalManufacturer" },
+                    { header: "New Manufacturer", accessor: "newManufacturer" },
+                    { header: "Original Part Number", accessor: "originalPartNumber" },
+                    { header: "New Part Number", accessor: "newPartNumber" }
+                  ]} 
+                  data={changedTableData} 
+                />
+              ) : (
+                <div className="p-4 text-center text-muted-foreground">No changed components</div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
