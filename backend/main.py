@@ -1,5 +1,6 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from typing import List, Dict, Any
 import xml.etree.ElementTree as ET
 
@@ -61,59 +62,60 @@ def parse_bom_xml(xml_content: str) -> Dict[str, Dict[str, str]]:
     return components
 
 def format_part(part):
+    # Ensure all fields are present and not None
     return {
-        "Reference": part.get("REFDES", ""),
-        "PartNumber": part.get("PART-NUM", ""),
-        "Quantity": part.get("QTY", ""),
-        "Opt": part.get("OPT", ""),
-        "Description": part.get("DESCRIPTION", ""),
-        "Package": part.get("PACKAGE", ""),
-        "PartName": part.get("PART-NAME", ""),
-        "Number": part.get("NUMBER", "")
+        "REFDES": part.get("REFDES", "") or part.get("Reference", ""),
+        "PartNumber": part.get("PART-NUM", "") or part.get("PartNumber", ""),
+        "QTY": part.get("QTY", "") or part.get("Quantity", ""),
+        "OPT": part.get("OPT", ""),
+        "DESCRIPTION": part.get("DESCRIPTION", "") or part.get("Description", ""),
+        "PACKAGE": part.get("PACKAGE", "") or part.get("Package", ""),
+        "PARTNAME": part.get("PART-NAME", "") or part.get("PartName", ""),
+        "NUMBER": part.get("NUMBER", "") or part.get("Number", "")
     }
 
 @app.post("/compare-bom")
-async def compare_bom(
-    old_file: UploadFile = File(...),
-    new_file: UploadFile = File(...)
-) -> Any:
-    old_xml = (await old_file.read()).decode()
-    new_xml = (await new_file.read()).decode()
-    old_components = parse_bom_xml(old_xml)
-    new_components = parse_bom_xml(new_xml)
+async def compare_bom(old_file: UploadFile = File(...), new_file: UploadFile = File(...)) -> Any:
+    try:
+        old_xml = (await old_file.read()).decode()
+        new_xml = (await new_file.read()).decode()
+        old_components = parse_bom_xml(old_xml)
+        new_components = parse_bom_xml(new_xml)
 
-    added = []
-    removed = []
-    changed = []
+        added = []
+        removed = []
+        changed = []
 
-    def key_fields(part):
-        return (
-            part.get("REFDES", ""),
-            part.get("QTY", ""),
-            part.get("CORP-NUM", ""),
-            part.get("PART-NUM", "")
-        )
+        def key_fields(part):
+            return (
+                part.get("REFDES", ""),
+                part.get("QTY", ""),
+                part.get("CORP-NUM", ""),
+                part.get("PART-NUM", "")
+            )
 
-    for ref, new_comp in new_components.items():
-        if ref not in old_components:
-            added.append(format_part(new_comp))
-        else:
-            old_comp = old_components[ref]
-            if key_fields(old_comp) != key_fields(new_comp):
-                changed.append({
-                    "Reference": ref,
-                    "Original": format_part(old_comp),
-                    "Modified": format_part(new_comp)
-                })
-    for ref, old_comp in old_components.items():
-        if ref not in new_components:
-            removed.append(format_part(old_comp))
+        for ref, new_comp in new_components.items():
+            if ref not in old_components:
+                added.append(format_part(new_comp))
+            else:
+                old_comp = old_components[ref]
+                if key_fields(old_comp) != key_fields(new_comp):
+                    changed.append({
+                        "Reference": ref,
+                        "Original": format_part(old_comp),
+                        "Modified": format_part(new_comp)
+                    })
+        for ref, old_comp in old_components.items():
+            if ref not in new_components:
+                removed.append(format_part(old_comp))
 
-    return {
-        "added": added,
-        "removed": removed,
-        "changed": changed,
-        "addedComponents": added,
-        "deletedComponents": removed,
-        "changedComponents": changed
-    }
+        return {
+            "added": added,
+            "removed": removed,
+            "changed": changed,
+            "addedComponents": added,
+            "deletedComponents": removed,
+            "changedComponents": changed
+        }
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})

@@ -25,38 +25,80 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
     return null;
   }
 
+  const renderComponentRow = (comp: any, i: number) => (
+    <tr key={i}>
+      <td>{comp.REFDES || comp.reference || ''}</td>
+      <td>{comp.PartNumber || comp.partNumber || ''}</td>
+      <td>{comp.QTY || comp.quantity || ''}</td>
+      <td>{comp.PACKAGE || comp.package || ''}</td>
+      <td>{comp.OPT || comp.opt || ''}</td>
+      <td>{comp.DESCRIPTION || comp.description || ''}</td>
+    </tr>
+  );
+
   return (
     <div className="space-y-4">
       {addedComponents.length > 0 && (
         <div>
           <h3 className="font-bold">Added Components</h3>
-          <ul className="list-disc ml-6">
-            {addedComponents.map((comp, i) => (
-              <li key={i}>{comp.reference} | {comp.value} | {comp.manufacturer} | {comp.partNumber}</li>
-            ))}
-          </ul>
+          <table className="min-w-full border text-sm">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Part Number</th>
+                <th>Quantity</th>
+                <th>Package</th>
+                <th>Opt</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {addedComponents.map(renderComponentRow)}
+            </tbody>
+          </table>
         </div>
       )}
       {deletedComponents.length > 0 && (
         <div>
           <h3 className="font-bold">Removed Components</h3>
-          <ul className="list-disc ml-6">
-            {deletedComponents.map((comp, i) => (
-              <li key={i}>{comp.reference} | {comp.value} | {comp.manufacturer} | {comp.partNumber}</li>
-            ))}
-          </ul>
+          <table className="min-w-full border text-sm">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Part Number</th>
+                <th>Quantity</th>
+                <th>Package</th>
+                <th>Opt</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {deletedComponents.map(renderComponentRow)}
+            </tbody>
+          </table>
         </div>
       )}
       {changedComponents.length > 0 && (
         <div>
           <h3 className="font-bold">Changed Components</h3>
-          <ul className="list-disc ml-6">
-            {changedComponents.map((chg, i) => (
-              <li key={i}>
-                {chg.reference}: Old [ {chg.original.value} | {chg.original.manufacturer} | {chg.original.partNumber} ] → New [ {chg.modified.value} | {chg.modified.manufacturer} | {chg.modified.partNumber} ]
-              </li>
-            ))}
-          </ul>
+          <table className="min-w-full border text-sm">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th colSpan={5}>Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              {changedComponents.map((chg: any, i: number) => (
+                <tr key={i}>
+                  <td>{chg.reference}</td>
+                  <td colSpan={5}>
+                    Old [ {chg.original.PartNumber || chg.original.partNumber || ''} | {chg.original.QTY || chg.original.quantity || ''} | {chg.original.PACKAGE || chg.original.package || ''} | {chg.original.OPT || chg.original.opt || ''} | {chg.original.DESCRIPTION || chg.original.description || ''} ] → New [ {chg.modified.PartNumber || chg.modified.partNumber || ''} | {chg.modified.QTY || chg.modified.quantity || ''} | {chg.modified.PACKAGE || chg.modified.package || ''} | {chg.modified.OPT || chg.modified.opt || ''} | {chg.modified.DESCRIPTION || chg.modified.description || ''} ]
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

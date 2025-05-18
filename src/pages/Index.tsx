@@ -216,7 +216,8 @@ const Index = () => {
       formData.append("old_file", oldFile);
       formData.append("new_file", newFile);
       try {
-        const response = await fetch("http://127.0.0.1:8000/compare-bom", {
+        // Use relative URL for proxy to work in all environments
+        const response = await fetch("/compare-bom", {
           method: "POST",
           body: formData,
         });

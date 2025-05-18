@@ -1,9 +1,10 @@
+// Vite proxy configuration for local FastAPI backend
+// Place this file as vite.config.ts or merge into your existing config
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -13,7 +14,6 @@ export default defineConfig(({ mode }) => ({
       "/compare-bom": {
         target: "http://127.0.0.1:8000",
         changeOrigin: true,
-        secure: false, // Allow self-signed certificates if using HTTPS
       },
     },
   },
