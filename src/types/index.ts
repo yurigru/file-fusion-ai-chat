@@ -1,4 +1,3 @@
-
 export interface UploadedFile {
   id: string;
   name: string;
@@ -19,6 +18,9 @@ export interface ElectronicComponent {
   description?: string;
   manufacturer?: string;
   partNumber?: string;
+  opt?: string;
+  package?: string;
+  partName?: string;
 }
 
 export interface NetlistConnection {

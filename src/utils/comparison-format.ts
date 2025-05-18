@@ -1,4 +1,3 @@
-
 import { ComparisonResult, ElectronicComponent } from "@/types";
 
 export const formatAddedComponentsData = (components: ElectronicComponent[] | undefined) => {
@@ -10,7 +9,10 @@ export const formatAddedComponentsData = (components: ElectronicComponent[] | un
     reference: comp.reference || '',
     value: comp.value || '',
     manufacturer: comp.manufacturer || '',
-    partNumber: comp.partNumber || ''
+    partNumber: comp.partNumber || '',
+    opt: comp.opt || '',
+    package: comp.package || '',
+    description: comp.description || ''
   }));
 };
 
@@ -36,7 +38,12 @@ export const formatChangedComponentsData = (
     originalManufacturer: change.original.manufacturer || '',
     newManufacturer: change.modified.manufacturer || '',
     originalPartNumber: change.original.partNumber || '',
-    newPartNumber: change.modified.partNumber || ''
+    newPartNumber: change.modified.partNumber || '',
+    originalOpt: change.original.opt || '',
+    newOpt: change.modified.opt || '',
+    originalPackage: change.original.package || '',
+    newPackage: change.modified.package || '',
+    description: change.modified.description || change.original.description || ''
   }));
 };
 

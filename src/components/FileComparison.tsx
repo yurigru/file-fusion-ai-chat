@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ComparisonFiles, ComparisonResult } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -30,23 +29,29 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
   
   const { file1, file2, result } = comparisonFiles;
 
-  // Component columns definitions
+  // Component columns definitions updated to include all XML fields
   const componentColumns: Column[] = [
     { header: "Reference", accessor: "reference" },
-    { header: "Value", accessor: "value" },
+    { header: "Part Number", accessor: "partNumber" },
+    { header: "Value/Quantity", accessor: "value" },
+    { header: "Option", accessor: "opt" },
+    { header: "Package", accessor: "package" },
     { header: "Manufacturer", accessor: "manufacturer" },
-    { header: "Part Number", accessor: "partNumber" }
+    { header: "Description", accessor: "description" }
   ];
 
-  // Changed component columns
+  // Changed component columns updated
   const changedComponentColumns: Column[] = [
     { header: "Reference", accessor: "reference" },
+    { header: "Original Part#", accessor: "originalPartNumber" },
+    { header: "New Part#", accessor: "newPartNumber" },
     { header: "Original Value", accessor: "originalValue" },
     { header: "New Value", accessor: "newValue" },
-    { header: "Original Manufacturer", accessor: "originalManufacturer" },
-    { header: "New Manufacturer", accessor: "newManufacturer" },
-    { header: "Original Part Number", accessor: "originalPartNumber" },
-    { header: "New Part Number", accessor: "newPartNumber" }
+    { header: "Original Opt", accessor: "originalOpt" },
+    { header: "New Opt", accessor: "newOpt" },
+    { header: "Original Pkg", accessor: "originalPackage" },
+    { header: "New Pkg", accessor: "newPackage" },
+    { header: "Description", accessor: "description" }
   ];
 
   useEffect(() => {
