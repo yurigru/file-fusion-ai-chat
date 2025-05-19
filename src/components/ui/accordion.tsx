@@ -54,3 +54,9 @@ const AccordionContent = React.forwardRef<
 AccordionContent.displayName = AccordionPrimitive.Content.displayName
 
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
+
+</think>
+
+```tsx
+import * * as React from "react"
+import * as AccordionPrimitive from "@radix-ui/react-accordion"
