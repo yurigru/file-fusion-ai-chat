@@ -31,9 +31,10 @@ const FileTable: React.FC<FileTableProps> = ({ data }) => {
   try {
     const filtered = useMemo(() => {
       return data.filter(row =>
-        COLUMN_HEADERS.some(col =>
-          (row[col.key] || "").toLowerCase().includes(search.toLowerCase())
-        )
+        COLUMN_HEADERS.some(col => {
+          const val = row[col.key];
+          return typeof val === "string" && val.toLowerCase().includes(search.toLowerCase());
+        })
       );
     }, [data, search]);
 
