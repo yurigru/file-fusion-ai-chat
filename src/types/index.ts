@@ -45,6 +45,16 @@ export interface ComparisonResult {
     original: Partial<ElectronicComponent>;
     modified: Partial<ElectronicComponent>;
   }[];
+  // Enhanced BOM comparison data
+  validationWarnings?: string[];
+  statistics?: {
+    old_components_count?: number;
+    new_components_count?: number;
+    added_count?: number;
+    removed_count?: number;
+    changed_count?: number;
+    total_changes?: number;
+  };
   // For Netlist specific comparisons
   addedConnections?: NetlistConnection[];
   deletedConnections?: NetlistConnection[];

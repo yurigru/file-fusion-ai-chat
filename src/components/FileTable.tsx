@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from "react";
 
 const COLUMN_HEADERS = [
+  { key: "REFDES", label: "Reference Designators" },
   { key: "PartNumber", label: "Part Number" },
   { key: "QTY", label: "Quantity" },
-  { key: "REFDES", label: "Reference Designators" },
-  { key: "PACKAGE", label: "PACKAGE" },
+  { key: "PACKAGE", label: "Package" },
+  { key: "DESCRIPTION", label: "Description" },
   { key: "OPT", label: "OPT" },
-  { key: "DESCRIPTION", label: "DESCRIPTION" },
 ];
 
 interface BOMRow {

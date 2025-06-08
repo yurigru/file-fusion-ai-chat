@@ -1,0 +1,1603 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="t:/Iman/Report.xsl"?>
+
+<SHOWSRVCALLS>
+     <DISPLAY-DEFINITION>
+          <PATHS>
+               <CSS>t:/Iman/CS.CSS</CSS>
+          </PATHS>
+          <TABLE-TITLE>BOM Report</TABLE-TITLE>
+          <COLUMN-WIDTH-UNITS>px</COLUMN-WIDTH-UNITS>
+          <BUTTONS>
+               <BACK />
+               <SORT />
+               <FILTER />
+               <COLUMN-WIDTHS />
+               <PRINT />
+          </BUTTONS>
+          <ROW>
+               <ROW-CRITERIA-SET>
+                    <ROW-CRITERIA>position() mod 2 = 0</ROW-CRITERIA>
+                    <ROW-ATTRIBUTE-NAME>class</ROW-ATTRIBUTE-NAME>
+                    <ROW-ATTRIBUTE-VALUE>CSTableRowEven</ROW-ATTRIBUTE-VALUE>
+               </ROW-CRITERIA-SET>
+               <ROW-OTHERWISE-SET>
+                    <ROW-ATTRIBUTE-NAME>class</ROW-ATTRIBUTE-NAME>
+                    <ROW-ATTRIBUTE-VALUE>CSTableRowOdd</ROW-ATTRIBUTE-VALUE>
+               </ROW-OTHERWISE-SET>
+          </ROW>
+          <COLUMN>
+               <COLTAG>NUMBER</COLTAG>
+               <FIELD-TYPE>Text</FIELD-TYPE>
+               <ALIGNMENT>Left</ALIGNMENT>
+               <SORT-INDEX>1</SORT-INDEX>
+               <SORTED>Y</SORTED>
+               <SORT-TYPE>Ascending</SORT-TYPE>
+               <HEADING>NUMBER</HEADING>
+          </COLUMN>
+          <COLUMN>
+               <COLTAG>PART-NUM</COLTAG>
+               <FIELD-TYPE>Text</FIELD-TYPE>
+               <ALIGNMENT>Left</ALIGNMENT>
+               <HEADING>PART-NUM</HEADING>
+          </COLUMN>
+          <COLUMN>
+               <COLTAG>QTY</COLTAG>
+               <FIELD-TYPE>Text</FIELD-TYPE>
+               <ALIGNMENT>Left</ALIGNMENT>
+               <HEADING>QTY</HEADING>
+          </COLUMN>
+          <COLUMN>
+               <COLTAG>OPT</COLTAG>
+               <FIELD-TYPE>Text</FIELD-TYPE>
+               <ALIGNMENT>Left</ALIGNMENT>
+               <HEADING>OPT</HEADING>
+          </COLUMN>
+          <COLUMN>
+               <COLTAG>REFDES</COLTAG>
+               <FIELD-TYPE>Text</FIELD-TYPE>
+               <ALIGNMENT>Left</ALIGNMENT>
+               <HEADING>REFDES</HEADING>
+          </COLUMN>
+          <COLUMN>
+               <COLTAG>PART-NAME</COLTAG>
+               <FIELD-TYPE>Text</FIELD-TYPE>
+               <ALIGNMENT>Left</ALIGNMENT>
+               <HEADING>PART-NAME</HEADING>
+          </COLUMN>
+          <COLUMN>
+               <COLTAG>PACKAGE</COLTAG>
+               <FIELD-TYPE>Text</FIELD-TYPE>
+               <ALIGNMENT>Left</ALIGNMENT>
+               <HEADING>PACKAGE</HEADING>
+          </COLUMN>
+          <COLUMN>
+               <COLTAG>DESCRIPTION</COLTAG>
+               <FIELD-TYPE>Text</FIELD-TYPE>
+               <ALIGNMENT>Left</ALIGNMENT>
+               <HEADING>DESCRIPTION</HEADING>
+          </COLUMN>
+     </DISPLAY-DEFINITION>
+     <DETAILS>
+          <RECORD>
+               <NUMBER>1</NUMBER>
+               <PART-NUM>00005407N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R172</REFDES>
+               <PART-NAME>D101001K00FP0</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 1K 0.06W 1% R0402                     </DESCRIPTION>
+          </RECORD>
+		   <RECORD>
+               <NUMBER>2</NUMBER>
+               <PART-NUM>00005021N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>R156</OPT>
+               <REFDES>C999</REFDES>
+               <PART-NAME>S0402CA1002BHB</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 10K 0.05W 0.1% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>4</NUMBER>
+               <PART-NUM>00006334N</PART-NUM>
+               <QTY>2</QTY>
+               <OPT></OPT>
+               <REFDES>R135-136</REFDES>
+               <PART-NAME>CRCW040249R9FKED</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 49.9E 0.063W 1% 040                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>5</NUMBER>
+               <PART-NUM>00006431N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R170</REFDES>
+               <PART-NAME>CR0603-FX-8452-E</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 84.5K 0.1W 1% 100P                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>6</NUMBER>
+               <PART-NUM>00009016N</PART-NUM>
+               <QTY>3</QTY>
+               <OPT></OPT>
+               <REFDES>R91-92,R121</REFDES>
+               <PART-NAME>CRCW040233R0FKTD</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 33E 0.05W 1% 0402                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>7</NUMBER>
+               <PART-NUM>00013746N</PART-NUM>
+               <QTY>35</QTY>
+               <OPT></OPT>
+               <REFDES>C1-26,C35-43</REFDES>
+               <PART-NAME>0402YC223KAT2A</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 22NF 16V 10% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>8</NUMBER>
+               <PART-NUM>00016348N</PART-NUM>
+               <QTY>2</QTY>
+               <OPT></OPT>
+               <REFDES>C704-705</REFDES>
+               <PART-NAME>CL10C101JBNC</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 100PF 50V 5% 0603                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>9</NUMBER>
+               <PART-NUM>00024414N</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>C824-827</REFDES>
+               <PART-NAME>0402YC153KAT2A</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 15NF 16V 10% X7R                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>10</NUMBER>
+               <PART-NUM>00024692N</PART-NUM>
+               <QTY>2</QTY>
+               <OPT></OPT>
+               <REFDES>R81,R87</REFDES>
+               <PART-NAME>TNPW06031002B-T9-</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 10K 0.1W 0.1% 0603                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>11</NUMBER>
+               <PART-NUM>00026061N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R155</REFDES>
+               <PART-NAME>S0402CA2002BEB</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 20K 0.06W 0.1% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>12</NUMBER>
+               <PART-NUM>00026062N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R171</REFDES>
+               <PART-NAME>S0402CA4991BEB</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 4.99K 0.05W 0.1% 04                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>13</NUMBER>
+               <PART-NUM>00030001N</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>R164-167</REFDES>
+               <PART-NAME>CRCW04021783F</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 178K .06W 1% 402                      </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>14</NUMBER>
+               <PART-NUM>00030014N</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>R110-113</REFDES>
+               <PART-NAME>CRCW0402221J</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 220E 0.06W 5% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>15</NUMBER>
+               <PART-NUM>00030017N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R145</REFDES>
+               <PART-NAME>CRCW0402471J</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 470E 0.06W 5% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>16</NUMBER>
+               <PART-NUM>00031302N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R275</REFDES>
+               <PART-NAME>CHP1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF .50E .25W 1% 1206                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>17</NUMBER>
+               <PART-NUM>00031914N</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>C820-823</REFDES>
+               <PART-NAME>0402YD104KAT2A</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 100NF 16V 10% X5R                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>18</NUMBER>
+               <PART-NUM>00032399N</PART-NUM>
+               <QTY>2</QTY>
+               <OPT></OPT>
+               <REFDES>U3-4</REFDES>
+               <PART-NAME>HSMF-C165</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>LED RED/GRN 2.5MCD 2.2V SMT0603                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>19</NUMBER>
+               <PART-NUM>00033460N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>C857</REFDES>
+               <PART-NAME>0805ZD475KAT2A</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 4.7UF 10V 10% X5R                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>20</NUMBER>
+               <PART-NUM>00034523N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R169</REFDES>
+               <PART-NAME>CRCW04021213FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 121K 0.06W 1% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>21</NUMBER>
+               <PART-NUM>00037410N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>C802</REFDES>
+               <PART-NAME>C1608X5R1A105K</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 1UF 10V 10% X5R 60                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>22</NUMBER>
+               <PART-NUM>00037915N</PART-NUM>
+               <QTY>2</QTY>
+               <OPT></OPT>
+               <REFDES>R139-140</REFDES>
+               <PART-NAME>TNPW0603-68R1-B-E</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 68.1E 0.1W 0.1% 060                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>23</NUMBER>
+               <PART-NUM>00042430N</PART-NUM>
+               <QTY>5</QTY>
+               <OPT></OPT>
+               <REFDES>C685-689</REFDES>
+               <PART-NAME>EMK107BJ105KA</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 1UF 16V 10% X7R 60                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>24</NUMBER>
+               <PART-NUM>00042636N</PART-NUM>
+               <QTY>3</QTY>
+               <OPT></OPT>
+               <REFDES>R160-161,R163</REFDES>
+               <PART-NAME>CRCW06031053FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 105K 0.125W 1% 0603                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>25</NUMBER>
+               <PART-NUM>00044422N</PART-NUM>
+               <QTY>3</QTY>
+               <OPT></OPT>
+               <REFDES>C829-831</REFDES>
+               <PART-NAME>GRM1555C1H560JD0-</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 56PF 50V 5% COG                      </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>26</NUMBER>
+               <PART-NUM>00044720N</PART-NUM>
+               <QTY>13</QTY>
+               <OPT></OPT>
+               <REFDES>C603-615</REFDES>
+               <PART-NAME>ECJ-1VB0J106M</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 10UF 6.3V 20% 0603                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>27</NUMBER>
+               <PART-NUM>00044881N</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>L1-4</REFDES>
+               <PART-NAME>BLM15EG221SN1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>FERRITE BEAD 220E 0.7A 25% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>28</NUMBER>
+               <PART-NUM>00044945N</PART-NUM>
+               <QTY>32</QTY>
+               <OPT></OPT>
+               <REFDES>C27-34,C767-790</REFDES>
+               <PART-NAME>C0402C104K4RAC</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 100NF 16V 10% X7R                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>29</NUMBER>
+               <PART-NUM>00046302N</PART-NUM>
+               <QTY>6</QTY>
+               <OPT></OPT>
+               <REFDES>C721,C725-727,C734-735</REFDES>
+               <PART-NAME>VJ0402Y102KXACW1-</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 1NF 50V 10% X7R 40                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>30</NUMBER>
+               <PART-NUM>00046509N</PART-NUM>
+               <QTY>223</QTY>
+               <OPT></OPT>
+               <REFDES>C307-372,C374-490,C507-523,C531,C533,C565-566,C580-583,C599-602,C853-856,C858,C864,C866-867,C872-874</REFDES>
+               <PART-NAME>0402YC104KAT2A</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 100NF 16V 10% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>31</NUMBER>
+               <PART-NUM>00046653N</PART-NUM>
+               <QTY>2</QTY>
+               <OPT></OPT>
+               <REFDES>C810-811</REFDES>
+               <PART-NAME>C0402C272K8RAC</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 2.7NF 10V 10% X7R                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>32</NUMBER>
+               <PART-NUM>00047391N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R168</REFDES>
+               <PART-NAME>CRCW06034642FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 46.4K 0.1W 1% 0603                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>33</NUMBER>
+               <PART-NUM>00048639N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R108</REFDES>
+               <PART-NAME>CR0402-FX-5110G</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 511E 0.06W 1% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>34</NUMBER>
+               <PART-NUM>00053176N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>C801</REFDES>
+               <PART-NAME>GRM1555C1H270JZ0-</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 27PF 50V 5% 0402                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>35</NUMBER>
+               <PART-NUM>00056295N</PART-NUM>
+               <QTY>35</QTY>
+               <OPT></OPT>
+               <REFDES>C621-624,C633-663</REFDES>
+               <PART-NAME>GRM21BR71A106KE51</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 10UF 10V 10% X7R 8                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>36</NUMBER>
+               <PART-NUM>00056757N</PART-NUM>
+               <QTY>2</QTY>
+               <OPT></OPT>
+               <REFDES>R72,R143</REFDES>
+               <PART-NAME>RC0402FR-074K99</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 4.99K 0.06W 1% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>37</NUMBER>
+               <PART-NUM>00057308F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R318</REFDES>
+               <PART-NAME>CRCW06030000Z0EA</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 0E 0.1W 5% 0603                       </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>38</NUMBER>
+               <PART-NUM>00058502F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>C828</REFDES>
+               <PART-NAME>C0402C680F5GAC</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 68PF 50V 1% 0402CO                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>39</NUMBER>
+               <PART-NUM>00061869F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U42</REFDES>
+               <PART-NAME>307-2</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC CLOCK PROGR 6 TO200MHZ SOIC                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>40</NUMBER>
+               <PART-NUM>00062009F</PART-NUM>
+               <QTY>3</QTY>
+               <OPT></OPT>
+               <REFDES>U33-34,U38</REFDES>
+               <PART-NAME>74ALVC125</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC BUFFER BUS X4 TSSOP 14                         </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>41</NUMBER>
+               <PART-NUM>00063233F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R162</REFDES>
+               <PART-NAME>TNPW0402100KBEED</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 100K 0.06W 0.1% 040                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>42</NUMBER>
+               <PART-NUM>00063424F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>CR2</REFDES>
+               <PART-NAME>PMEG2020EH</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>SCHOTTKY DIODE 20V 2A SMT SOD12                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>43</NUMBER>
+               <PART-NUM>00063795F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U24</REFDES>
+               <PART-NAME>8556</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC VR LDO 4A QFN 16                               </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>44</NUMBER>
+               <PART-NUM>00065028F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U11</REFDES>
+               <PART-NAME>6709OUB</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC MONITOR QUAD ADJ UMAX 10                       </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>45</NUMBER>
+               <PART-NUM>00065160N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R158</REFDES>
+               <PART-NAME>CRCW08051R0F</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 1E 0.1W 1% 0805                       </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>46</NUMBER>
+               <PART-NUM>00065498F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>L29</REFDES>
+               <PART-NAME>IHLP1616BZERR22M-</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>INDUCTOR CHIP 0.22UH 13A 20% 00                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>47</NUMBER>
+               <PART-NUM>00065695F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R159</REFDES>
+               <PART-NAME>TNPW06032803BEEA</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 280K 0.1W 0.1% 0603                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>48</NUMBER>
+               <PART-NUM>00065947F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U32</REFDES>
+               <PART-NAME>O25.0JO22B3.31T1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>CRYSTAL OSC 25.0MHZ 3.3V LCC 4                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>49</NUMBER>
+               <PART-NUM>00066155F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>C799</REFDES>
+               <PART-NAME>04025A821JAT2A</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 820PF 50V 5% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>50</NUMBER>
+               <PART-NUM>00071644F</PART-NUM>
+               <QTY>8</QTY>
+               <OPT></OPT>
+               <REFDES>C207-208,C754-759</REFDES>
+               <PART-NAME>GRM155R61A105KE1-</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 1UF 10V 10% 0402                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>51</NUMBER>
+               <PART-NUM>00077385F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U13</REFDES>
+               <PART-NAME>TFP410MPAPREP</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC DIG VIDEO TRANSM DVI PQFP 64                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>52</NUMBER>
+               <PART-NUM>00077436F</PART-NUM>
+               <QTY>8</QTY>
+               <OPT></OPT>
+               <REFDES>C746-753</REFDES>
+               <PART-NAME>0402X474K250SNT</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER .47UF 25V 10% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>53</NUMBER>
+               <PART-NUM>00077795F</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>C812-815</REFDES>
+               <PART-NAME>C0805C106K4PACTU</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 10UF 16V 10% 0805X                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>54</NUMBER>
+               <PART-NUM>00080879N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U17</REFDES>
+               <PART-NAME>28F256P33TF</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC FLASH MEM 256MBIT 95NS 2.3V                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>55</NUMBER>
+               <PART-NUM>00081005N</PART-NUM>
+               <QTY>21</QTY>
+               <OPT></OPT>
+               <REFDES>C669-682,C684,C792-797</REFDES>
+               <PART-NAME>1210X107K100SNT</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 100UF 10V 10% X7R1                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>56</NUMBER>
+               <PART-NUM>00083246F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>L28</REFDES>
+               <PART-NAME>IHLP4040DZER1R0M-</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>INDUCTOR CHIP 1.0UH 20A 20% 000                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>57</NUMBER>
+               <PART-NUM>00086317N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U1</REFDES>
+               <PART-NAME>4SGX360KF40I3</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC FPGA 360LE TRSVR 36 3GR FBGA                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>58</NUMBER>
+               <PART-NUM>00086823F</PART-NUM>
+               <QTY>2</QTY>
+               <OPT></OPT>
+               <REFDES>Q1-2</REFDES>
+               <PART-NAME>CSD16321Q5</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>TRANS MOSFET N-CH 25V SON8                        </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>59</NUMBER>
+               <PART-NUM>00086846F</PART-NUM>
+               <QTY>6</QTY>
+               <OPT></OPT>
+               <REFDES>C537,C546,C548,C550,C552,C584</REFDES>
+               <PART-NAME>C0402C475M7PAC</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 4.7UF 4V 20% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>60</NUMBER>
+               <PART-NUM>00086904F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U23</REFDES>
+               <PART-NAME>40041</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC DRIVER DC-DC 600KHZ SON 8                      </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>61</NUMBER>
+               <PART-NUM>00086955F</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>L30-33</REFDES>
+               <PART-NAME>LQH32PNR47NN0</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>INDUCTOR CHIP 0.47UH 2.55A 30%                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>62</NUMBER>
+               <PART-NUM>00087748N</PART-NUM>
+               <QTY>5</QTY>
+               <OPT></OPT>
+               <REFDES>C803-807</REFDES>
+               <PART-NAME>1206X226M160ST</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 22UF 16V 20% X7R12                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>63</NUMBER>
+               <PART-NUM>00087841F</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>U16,U18-20</REFDES>
+               <PART-NAME>54418</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC CONV 6V 4A 2MHZ QFN 16                         </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>64</NUMBER>
+               <PART-NUM>00087995F</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>L34-37</REFDES>
+               <PART-NAME>IHLP1212BZERR88M-</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>INDUCTOR CHIP 0.88UH 4.5A 20% 0                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>65</NUMBER>
+               <PART-NUM>00089400N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U12</REFDES>
+               <PART-NAME>2210F256</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC EPLD MAX-II 2.2K 5NS FBGA 25                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>66</NUMBER>
+               <PART-NUM>00090651F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U44</REFDES>
+               <PART-NAME>531FB74M2500DG</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>CRYSTAL OSC 74.25MHZ LCC 6                        </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>67</NUMBER>
+               <PART-NUM>00091182N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U2</REFDES>
+               <PART-NAME>MAX6389XS31D1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC ANA POWERON RST 1MS SC70 4                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>68</NUMBER>
+               <PART-NUM>049999a-00</PART-NUM>
+               <QTY>8</QTY>
+               <OPT></OPT>
+               <REFDES>U5-10,U21-22</REFDES>
+               <PART-NAME>46H32M32LFCM-5IT</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC DDR 8MX32X4B 5NS, REBALLING                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>69</NUMBER>
+               <PART-NUM>34759211M</PART-NUM>
+               <QTY>7</QTY>
+               <OPT></OPT>
+               <REFDES>R31,R68,R73-74,R76-78</REFDES>
+               <PART-NAME>CR0402K10K0G</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 10K 0.06W 1% 0402                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>70</NUMBER>
+               <PART-NUM>34759333M</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>R127-130</REFDES>
+               <PART-NAME>CRCW06032001FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 2K 0.063W 1% 0603                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>71</NUMBER>
+               <PART-NUM>34759708M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>C798</REFDES>
+               <PART-NAME>C0603C224K8RAC</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 220NF 10V 10% 0603                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>72</NUMBER>
+               <PART-NUM>34759936M</PART-NUM>
+               <QTY>9</QTY>
+               <OPT></OPT>
+               <REFDES>R41,R43,R85-86,R273,R280-283</REFDES>
+               <PART-NAME>CRCW04021000FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 100E 0.063W 1% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>73</NUMBER>
+               <PART-NUM>34759965M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R89</REFDES>
+               <PART-NAME>CRCW06032552FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 25.5K 0.063W 1% 060                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>74</NUMBER>
+               <PART-NUM>34759988M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>C808</REFDES>
+               <PART-NAME>0402-3-C-332-K-A-</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 3.3NF 25V 10% X7R                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>75</NUMBER>
+               <PART-NUM>34759989M</PART-NUM>
+               <QTY>30</QTY>
+               <OPT></OPT>
+               <REFDES>R26,R28,R30,R45-60,R62-63,R65,R238-240,R276-277,R279,R316-317</REFDES>
+               <PART-NAME>CRCW04021002F100-</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 10K 0.063W 1% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>76</NUMBER>
+               <PART-NUM>34759990M</PART-NUM>
+               <QTY>10</QTY>
+               <OPT></OPT>
+               <REFDES>R79,R82-84,R149,R278,R320-323</REFDES>
+               <PART-NAME>CRCW04021001F100-</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 1K 0.063W 1% 0402                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>77</NUMBER>
+               <PART-NUM>34759996M</PART-NUM>
+               <QTY>227</QTY>
+               <OPT></OPT>
+               <REFDES>C63-65,C72-144,C146-148,C153-155,C157-206,C209-216,C223-230,C232-306,C850-852,C861</REFDES>
+               <PART-NAME>CAP</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 10NF 25V 10% X7R                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>78</NUMBER>
+               <PART-NUM>34760016M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R64</REFDES>
+               <PART-NAME>CRCW04029091FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 9.09K 0.063W 1% 040                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>79</NUMBER>
+               <PART-NUM>34760017M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R157</REFDES>
+               <PART-NAME>CRCW04022152FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 21.5K 0.063W 1%                       </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>80</NUMBER>
+               <PART-NUM>34760038M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R154</REFDES>
+               <PART-NAME>CRCW04026490FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 649E 0.063W 1% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>81</NUMBER>
+               <PART-NUM>34760045M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>C800</REFDES>
+               <PART-NAME>0402-5-C-471-K-A-</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 470PF 50V 10% X7R                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>82</NUMBER>
+               <PART-NUM>34760049M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R90</REFDES>
+               <PART-NAME>CRCW04021501FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 1.5K 0.063W 1% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>83</NUMBER>
+               <PART-NUM>34760060M</PART-NUM>
+               <QTY>5</QTY>
+               <OPT></OPT>
+               <REFDES>R88,R106,R109,R114-115</REFDES>
+               <PART-NAME>CRCW040221R0FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 21E 0.063W 1% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>84</NUMBER>
+               <PART-NUM>34760063M</PART-NUM>
+               <QTY>38</QTY>
+               <OPT></OPT>
+               <REFDES>R1-2,R4,R11-25,R27,R29,R33-40,R42,R44,R71,R101,R116,R271-272,R287-288,R291</REFDES>
+               <PART-NAME>CRCW04024751FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 4.75K 0.063W 1% 040                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>85</NUMBER>
+               <PART-NUM>34760115M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>C809</REFDES>
+               <PART-NAME>0402-5-C-392-K-A-</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 3.9NF 50V 10% X7R                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>86</NUMBER>
+               <PART-NUM>34760117M</PART-NUM>
+               <QTY>28</QTY>
+               <OPT></OPT>
+               <REFDES>R69-70,R96-100,R103,R207,R211,R227,R229-230,R232,R235-236,R274,R284-285,R292-297,R312-313,R324</REFDES>
+               <PART-NAME>CRCW0402000JRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 00E 0.06W 5% 00402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>87</NUMBER>
+               <PART-NUM>34760124M</PART-NUM>
+               <QTY>3</QTY>
+               <OPT></OPT>
+               <REFDES>R150-152</REFDES>
+               <PART-NAME>CRCW04024991FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 4.99K 0.063W 1% 040                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>88</NUMBER>
+               <PART-NUM>34760171M</PART-NUM>
+               <QTY>19</QTY>
+               <OPT></OPT>
+               <REFDES>C44-62</REFDES>
+               <PART-NAME>GRM36X7R473K010D</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 47NF 10V 10% X7R                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>89</NUMBER>
+               <PART-NUM>34760248M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R80</REFDES>
+               <PART-NAME>PCF0603033012BELT</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 30.1K 0.063W 0.1%                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>90</NUMBER>
+               <PART-NUM>88800314M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U41</REFDES>
+               <PART-NAME>CY2305</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC BUFFER ZERO DELAY 3.3V SOIC                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>91</NUMBER>
+               <PART-NUM>88889529M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>U31</REFDES>
+               <PART-NAME>GXO-U108L</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>CRYSTAL OSC 100.000MHZ 3.3V LCC                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>92</NUMBER>
+               <PART-NUM>88889597M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R61</REFDES>
+               <PART-NAME>CRCW04027501FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 7.5K 0.1W 1% 0402                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>93</NUMBER>
+               <PART-NUM>99609464M</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>L9,L11,L17-18</REFDES>
+               <PART-NAME>2506033017Z0</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>FERRITE BEAD 300E .45A 10%                        </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>94</NUMBER>
+               <PART-NUM>99932390M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>C859</REFDES>
+               <PART-NAME>08051C472KAT2A</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 4.7NF 100V 10% X7R                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>95</NUMBER>
+               <PART-NUM>99971954M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R269</REFDES>
+               <PART-NAME>CRCW08057321FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 7.32K 0.1W 1% 0805                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>96</NUMBER>
+               <PART-NUM>99977734M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>L8</REFDES>
+               <PART-NAME>2506031017</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>FERRITE BEAD 100E 400MA .% 0603                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>97</NUMBER>
+               <PART-NUM>99977760M</PART-NUM>
+               <QTY>4</QTY>
+               <OPT></OPT>
+               <REFDES>P11-14</REFDES>
+               <PART-NAME>71436-2164</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>PLUG SMT 64 C STR P1.0MM                          </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>98</NUMBER>
+               <PART-NUM>99979409M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R67</REFDES>
+               <PART-NAME>CRCW1206-ZERO</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF ZERO 0.25W 1% 1206                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>99</NUMBER>
+               <PART-NUM>99983362M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>L5</REFDES>
+               <PART-NAME>2506036017</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>FERRITE BEAD 600E 100MA 20% 060                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>100</NUMBER>
+               <PART-NUM>99990471M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>CR1</REFDES>
+               <PART-NAME>SML0603-G5-TR</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>LED GRN 18MCD 2.0/20 STR SMT PK                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>101</NUMBER>
+               <PART-NUM>00001496N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C701</REFDES>
+               <PART-NAME>10NF</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 10NF 50V 10% X7R                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>102</NUMBER>
+               <PART-NUM>00005407N</PART-NUM>
+               <QTY>2</QTY>
+               <OPT>NA</OPT>
+               <REFDES>L43,L45</REFDES>
+               <PART-NAME>BLM18BD601SN1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>FERRITE BEAD 600E 200MA 25% 060                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>103</NUMBER>
+               <PART-NUM>00006334N</PART-NUM>
+               <QTY>5</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R132-134,R137-138</REFDES>
+               <PART-NAME>CRCW040249R9FKED</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 49.9E 0.063W 1% 040                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>104</NUMBER>
+               <PART-NUM>00009016N</PART-NUM>
+               <QTY>9</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R117-120,R122-126</REFDES>
+               <PART-NAME>CRCW040233R0FKTD</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 33E 0.05W 1% 0402                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>105</NUMBER>
+               <PART-NUM>00016296N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C833</REFDES>
+               <PART-NAME>C0402C472K1RAC</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 4.7NF 100V 10% X7R                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>106</NUMBER>
+               <PART-NUM>00016459N</PART-NUM>
+               <QTY>3</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R191-193</REFDES>
+               <PART-NAME>RC2012F75R0CS</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 75E .125W 1% 805                      </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>107</NUMBER>
+               <PART-NUM>00028866N</PART-NUM>
+               <QTY>6</QTY>
+               <OPT>NA</OPT>
+               <REFDES>L20,L22-26</REFDES>
+               <PART-NAME>MLB-160808-0470P-</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>FERRITE BEAD 470E 1.5A 20% 0603                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>108</NUMBER>
+               <PART-NUM>00029273N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R178</REFDES>
+               <PART-NAME>CRCW04026193FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 619K 0.06W 1% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>109</NUMBER>
+               <PART-NUM>00030535N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C832</REFDES>
+               <PART-NAME>04025A100JAT2A</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 10PF 50V 5% 0402 N                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>110</NUMBER>
+               <PART-NUM>00031074N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R173</REFDES>
+               <PART-NAME>CRCW040210R0FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 10E 0.06W 1% 0402                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>111</NUMBER>
+               <PART-NUM>00033460N</PART-NUM>
+               <QTY>6</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C692-697</REFDES>
+               <PART-NAME>0805ZD475KAT2A</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 4.7UF 10V 10% X5R                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>112</NUMBER>
+               <PART-NUM>00044708N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R177</REFDES>
+               <PART-NAME>CR0402-FX-1503E</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 150K 0.06W 1% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>113</NUMBER>
+               <PART-NUM>00044720N</PART-NUM>
+               <QTY>3</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C617-619</REFDES>
+               <PART-NAME>ECJ-1VB0J106M</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 10UF 6.3V 20% 0603                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>114</NUMBER>
+               <PART-NUM>00044945N</PART-NUM>
+               <QTY>7</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C760-766</REFDES>
+               <PART-NAME>C0402C104K4RAC</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 100NF 16V 10% X7R                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>115</NUMBER>
+               <PART-NUM>00045432N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C837</REFDES>
+               <PART-NAME>VJ0603Y823KXACW1-</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 82NF 50V 10% 0603                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>116</NUMBER>
+               <PART-NUM>00046302N</PART-NUM>
+               <QTY>20</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C708-715,C718-720,C722-724,C728-733</REFDES>
+               <PART-NAME>VJ0402Y102KXACW1-</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 1NF 50V 10% X7R 40                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>117</NUMBER>
+               <PART-NUM>00046509N</PART-NUM>
+               <QTY>70</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C491-506,C524-527,C532,C534-536,C538-545,C547,C549,C551,C553,C555,C559,C567-579,C586-598,C863,C865,C868-871</REFDES>
+               <PART-NAME>0402YC104KAT2A</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 100NF 16V 10% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>118</NUMBER>
+               <PART-NUM>00048639N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R107</REFDES>
+               <PART-NAME>CR0402-FX-5110G</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 511E 0.06W 1% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>119</NUMBER>
+               <PART-NUM>00050223N</PART-NUM>
+               <QTY>2</QTY>
+               <OPT>NA</OPT>
+               <REFDES>P15-16</REFDES>
+               <PART-NAME>ASP-105885-01</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>HEADER SMT 114 P STR 6X19                         </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>120</NUMBER>
+               <PART-NUM>00050235F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>U29</REFDES>
+               <PART-NAME>O</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>CRYSTAL OSC 28.63636MHZ 3.3V LC                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>121</NUMBER>
+               <PART-NUM>00053163N</PART-NUM>
+               <QTY>3</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R195-197</REFDES>
+               <PART-NAME>CR0402-FX-2200E</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 220E 0.06W 1% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>122</NUMBER>
+               <PART-NUM>00056295N</PART-NUM>
+               <QTY>13</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C620,C625-632,C665-668</REFDES>
+               <PART-NAME>GRM21BR71A106KE51</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 10UF 10V 10% X7R 8                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>123</NUMBER>
+               <PART-NUM>00056757N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R142</REFDES>
+               <PART-NAME>RC0402FR-074K99</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 4.99K 0.06W 1% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>124</NUMBER>
+               <PART-NUM>00058098N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>L39</REFDES>
+               <PART-NAME>LQH32CNR47M33</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>INDUCTOR CHIP 0.47UH 1.1A 20%                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>125</NUMBER>
+               <PART-NUM>00062100F</PART-NUM>
+               <QTY>3</QTY>
+               <OPT>NA</OPT>
+               <REFDES>U35-37</REFDES>
+               <PART-NAME>90LV804</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC LVDS BUFFER 3.3V LLP 32                        </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>126</NUMBER>
+               <PART-NUM>00063574F</PART-NUM>
+               <QTY>3</QTY>
+               <OPT>NA</OPT>
+               <REFDES>U26-28</REFDES>
+               <PART-NAME>890</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC AMP OP LOW POWER W/B SOT23 6                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>127</NUMBER>
+               <PART-NUM>00065587N</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C707</REFDES>
+               <PART-NAME>298D107X06R3P2T</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP TAN 100UF 6.3V 20%                       </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>128</NUMBER>
+               <PART-NUM>00065899F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>L38</REFDES>
+               <PART-NAME>LPS4018-472ML</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>INDUCTOR CHIP 4.7UH 1.8A 20% 00                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>129</NUMBER>
+               <PART-NUM>00066407F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>CR3</REFDES>
+               <PART-NAME>DFLS240L</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>SCHOTTKY DIODE SMT 40V 2A PDI12                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>130</NUMBER>
+               <PART-NUM>00077166F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>U30</REFDES>
+               <PART-NAME>7181</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC ADC VIDEO RGB 10BIT LQFP 64                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>131</NUMBER>
+               <PART-NUM>00077385F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>U14</REFDES>
+               <PART-NAME>TFP410MPAPREP</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC DIG VIDEO TRANSM DVI PQFP 64                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>132</NUMBER>
+               <PART-NUM>00077795F</PART-NUM>
+               <QTY>4</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C816-819</REFDES>
+               <PART-NAME>C0805C106K4PACTU</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 10UF 16V 10% 0805X                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>133</NUMBER>
+               <PART-NUM>00078705N</PART-NUM>
+               <QTY>4</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C737-740</REFDES>
+               <PART-NAME>TCTAL1C226M8R</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP TAN 22UF 16V 20% A-12                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>134</NUMBER>
+               <PART-NUM>00083521F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>U25</REFDES>
+               <PART-NAME>63700</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC CONV DC/DC -15V 360MA QFN 10                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>135</NUMBER>
+               <PART-NUM>00085767F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>Q3</REFDES>
+               <PART-NAME>SI1555DL-T1-E3</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>TRANS MOSFET N-CH P-CH SOT363-6                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>136</NUMBER>
+               <PART-NUM>00086846F</PART-NUM>
+               <QTY>26</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C554,C556-558,C560-564,C585,C683,C690-691,C698-700,C702-703,C706,C716-717,C736,C745,C791,C848-849</REFDES>
+               <PART-NAME>C0402C475M7PAC</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 4.7UF 4V 20% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>137</NUMBER>
+               <PART-NUM>00088305F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>U15</REFDES>
+               <PART-NAME>401</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>IC DIG RECEIV 3.3V 165M TQFP 10                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>138</NUMBER>
+               <PART-NUM>00090454F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>U45</REFDES>
+               <PART-NAME>531FB106M250DGR</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>CRYSTAL OSC 106.25M 20PP 3.3V L                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>139</NUMBER>
+               <PART-NUM>00090460F</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>U43</REFDES>
+               <PART-NAME>531FB125M000DG</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>CRYSTAL OSC 125M 20PPM 3.3V LCC                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>140</NUMBER>
+               <PART-NUM>34759211M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R75</REFDES>
+               <PART-NAME>CR0402K10K0G</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 10K 0.06W 1% 0402                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>141</NUMBER>
+               <PART-NUM>34759775M</PART-NUM>
+               <QTY>4</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C741-744</REFDES>
+               <PART-NAME>TAJA475K020R</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP TAN 4.7UF 20V 10% A                      </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>142</NUMBER>
+               <PART-NUM>34759989M</PART-NUM>
+               <QTY>3</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R174-175,R286</REFDES>
+               <PART-NAME>CRCW04021002F100-</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 10K 0.063W 1% 0402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>143</NUMBER>
+               <PART-NUM>34759996M</PART-NUM>
+               <QTY>19</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C66-71,C145,C149-152,C156,C217-221,C860,C862</REFDES>
+               <PART-NAME>CAP</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 10NF 25V 10% X7R                     </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>144</NUMBER>
+               <PART-NUM>34760027M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R176</REFDES>
+               <PART-NAME>CRCW04021003FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 100K 0.063W 1% 0402                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>145</NUMBER>
+               <PART-NUM>34760028M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R153</REFDES>
+               <PART-NAME>CRCW04024321FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 2.43K .063W 1% 402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>146</NUMBER>
+               <PART-NUM>34760063M</PART-NUM>
+               <QTY>10</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R3,R5-10,R270,R289-290</REFDES>
+               <PART-NAME>CRCW04024751FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 4.75K 0.063W 1% 040                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>147</NUMBER>
+               <PART-NUM>34760068M</PART-NUM>
+               <QTY>12</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R179-190</REFDES>
+               <PART-NAME>RES</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 3.32K 0.063W 1% 040                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>148</NUMBER>
+               <PART-NUM>34760117M</PART-NUM>
+               <QTY>62</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R93-94,R102,R104-105,R131,R141,R144,R206,R208-210,R212-226,R228,R231,R233-234,R237,R256-268,R298-311,R314-315,R319</REFDES>
+               <PART-NAME>CRCW0402000JRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 00E 0.06W 5% 00402                    </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>149</NUMBER>
+               <PART-NUM>34760125M</PART-NUM>
+               <QTY>3</QTY>
+               <OPT>NA</OPT>
+               <REFDES>R146-148</REFDES>
+               <PART-NAME>CRCW04024991FRT1</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 4.99K 0.063W 1% 040                   </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>150</NUMBER>
+               <PART-NUM>34760170M</PART-NUM>
+               <QTY>3</QTY>
+               <OPT>NA</OPT>
+               <REFDES>C834-836</REFDES>
+               <PART-NAME>0402-5-C-102-K-A-</PART-NAME>
+               <PACKAGE>CAP</PACKAGE>
+               <DESCRIPTION>CAP CHIP CER 1NF 50V 10% X7R                      </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>151</NUMBER>
+               <PART-NUM>88885070M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT></OPT>
+               <REFDES>R194</REFDES>
+               <PART-NAME>CR0603-FX-1691-E</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>RES CHIP MF 1.69K 0.1W 1%                         </DESCRIPTION>
+          </RECORD>
+          <RECORD>
+               <NUMBER>152</NUMBER>
+               <PART-NUM>99609464M</PART-NUM>
+               <QTY>8</QTY>
+               <OPT>NA</OPT>
+               <REFDES>L6-7,L10,L12-16</REFDES>
+               <PART-NAME>2506033017Z0</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>FERRITE BEAD 300E .45A 10%                        </DESCRIPTION>
+          </RECORD>
+		  <RECORD>
+               <NUMBER>153</NUMBER>
+               <PART-NUM>99609464M</PART-NUM>
+               <QTY>1</QTY>
+               <OPT>NA</OPT>
+               <REFDES>U999</REFDES>
+               <PART-NAME>2506033017Z0</PART-NAME>
+               <PACKAGE></PACKAGE>
+               <DESCRIPTION>FERRITE BEAD 300E .45A 10%                        </DESCRIPTION>
+          </RECORD>
+     </DETAILS>
+</SHOWSRVCALLS>

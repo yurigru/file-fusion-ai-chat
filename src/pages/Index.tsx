@@ -221,61 +221,136 @@ const Index = () => {
           method: "POST",
           body: formData,
         });
+        
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.detail || "BOM comparison failed");
         }
-        const data = await response.json();
+          const data = await response.json();
+        console.log("BOM comparison response:", data);
+        
+        // Show validation warnings if any
+        if (data.validation_warnings && data.validation_warnings.length > 0) {
+          data.validation_warnings.forEach((warning: string) => {
+            toast.error(`Warning: ${warning}`);
+          });
+        }
+        
+        // Log statistics
+        if (data.statistics) {
+          console.log("BOM comparison statistics:", data.statistics);
+          toast.success(`Comparison completed: ${data.statistics.total_changes} total changes found`);
+        }        // Map the backend response to the frontend component data structure
+        const addedComponents = (data.added || []).map(comp => ({
+          id: comp.reference || "",
+          reference: comp.reference || "",
+          value: comp.quantity || "",
+          partNumber: comp.partNumber || "",
+          description: comp.description || "",
+          manufacturer: comp.manufacturer || "",
+          footprint: comp.footprint || "",
+          quantity: parseInt(comp.quantity || "0")
+        }));
+        
+        const deletedComponents = (data.removed || []).map(comp => ({
+          id: comp.reference || "",
+          reference: comp.reference || "",
+          value: comp.quantity || "",
+          partNumber: comp.partNumber || "",
+          description: comp.description || "",
+          manufacturer: comp.manufacturer || "",
+          footprint: comp.footprint || "",
+          quantity: parseInt(comp.quantity || "0")
+        }));const changedComponents = (data.changed || []).map(chg => {
+          console.log("Debug changed component:", chg);
+          console.log("Debug original fields:", chg?.original ? Object.keys(chg.original) : "No original object");
+          console.log("Debug modified fields:", chg?.modified ? Object.keys(chg.modified) : "No modified object");
+          
+          // Ensure we're accessing the data with proper format checking
+          if (!chg || !chg.original || !chg.modified) {
+            console.warn("Invalid changed component data structure:", chg);            return {
+              id: chg?.reference || "unknown",
+              reference: chg?.reference || "unknown",
+              original: {
+                partNumber: "",
+                quantity: 0,
+                value: "",
+                reference: "",
+                footprint: "",
+                description: "",
+                manufacturer: "",
+              },
+              modified: {
+                partNumber: "",
+                quantity: 0,
+                value: "",
+                reference: "",
+                footprint: "",
+                description: "",
+                manufacturer: "",
+              }
+            };
+          }            const mappedComponent = {
+            id: chg.reference,
+            reference: chg.reference,
+            original: {
+              partNumber: chg.original.partNumber || "",
+              quantity: parseInt(chg.original.quantity || "0"),
+              value: chg.original.quantity || "",
+              reference: chg.original.reference || chg.reference,
+              footprint: chg.original.footprint || "",
+              description: chg.original.description || "",
+              manufacturer: chg.original.manufacturer || "",
+            },
+            modified: {
+              partNumber: chg.modified.partNumber || "",
+              quantity: parseInt(chg.modified.quantity || "0"),
+              value: chg.modified.quantity || "",
+              reference: chg.modified.reference || chg.reference,
+              footprint: chg.modified.footprint || "",
+              description: chg.modified.description || "",
+              manufacturer: chg.modified.manufacturer || "",
+            },
+          };
+          console.log("Mapped changed component:", mappedComponent);
+          return mappedComponent;
+        });
+          console.log("Mapped component data:", {
+          added: addedComponents.length,
+          deleted: deletedComponents.length,
+          changed: changedComponents.length
+        });
+        
+        // Additional debug: Log the actual mapped data
+        if (changedComponents.length > 0) {
+          console.log("First mapped changed component:", changedComponents[0]);
+        }
         setComparisonFiles({
           ...comparisonFiles,
           result: {
-            added: data.added.map((_, i) => i.toString()),
-            deleted: data.removed.map((_, i) => i.toString()),
-            changed: data.changed.map((chg, i) => ({
-              line: i,
-              original: JSON.stringify(chg.Original),
-              modified: JSON.stringify(chg.Modified),
-            })),
-            addedComponents: data.added.map(comp => ({
-              PartNumber: comp.PartNumber || comp["PartNumber"] || "",
-              QTY: comp.Quantity || comp["QTY"] || "",
-              REFDES: comp.Reference || comp["REFDES"] || "",
-              PACKAGE: comp.Package || comp["PACKAGE"] || "",
-              OPT: comp.Opt || comp["OPT"] || "",
-              DESCRIPTION: comp.Description || comp["DESCRIPTION"] || "",
-            })),
-            deletedComponents: data.removed.map(comp => ({
-              PartNumber: comp.PartNumber || comp["PartNumber"] || "",
-              QTY: comp.Quantity || comp["QTY"] || "",
-              REFDES: comp.Reference || comp["REFDES"] || "",
-              PACKAGE: comp.Package || comp["PACKAGE"] || "",
-              OPT: comp.Opt || comp["OPT"] || "",
-              DESCRIPTION: comp.Description || comp["DESCRIPTION"] || "",
-            })),
-            changedComponents: data.changed.map(chg => ({
-              id: chg.Reference,
-              reference: chg.Reference,
-              original: {
-                PartNumber: chg.Original.PartNumber || chg.Original["PartNumber"] || "",
-                QTY: chg.Original.Quantity || chg.Original["QTY"] || "",
-                REFDES: chg.Original.Reference || chg.Original["REFDES"] || "",
-                PACKAGE: chg.Original.Package || chg.Original["PACKAGE"] || "",
-                OPT: chg.Original.Opt || chg.Original["OPT"] || "",
-                DESCRIPTION: chg.Original.Description || chg.Original["DESCRIPTION"] || "",
-              },
-              modified: {
-                PartNumber: chg.Modified.PartNumber || chg.Modified["PartNumber"] || "",
-                QTY: chg.Modified.Quantity || chg.Modified["QTY"] || "",
-                REFDES: chg.Modified.Reference || chg.Modified["REFDES"] || "",
-                PACKAGE: chg.Modified.Package || chg.Modified["PACKAGE"] || "",
-                OPT: chg.Modified.Opt || chg.Modified["OPT"] || "",
-                DESCRIPTION: chg.Modified.Description || chg.Modified["DESCRIPTION"] || "",
-              },
-            })),
+            // Empty arrays for legacy fields
+            added: [],
+            deleted: [],
+            changed: [],
+            // Map the component data
+            addedComponents,
+            deletedComponents,
+            changedComponents,
+            // Add validation warnings and statistics
+            validationWarnings: data.validation_warnings || [],
+            statistics: data.statistics || {}
           },
         });
+
         setActiveTab("compare");
-        toast.success("Comparison completed (BOM via FastAPI)");
+        
+        // Show success message with statistics
+        const totalChanges = (data.statistics?.total_changes || 0);
+        if (totalChanges === 0) {
+          toast.success("Comparison completed - No differences found");
+        } else {
+          toast.success(`Comparison completed - ${totalChanges} changes found`);
+        }
       } catch (err: any) {
         toast.error(`BOM comparison failed: ${err.message}`);
       } finally {

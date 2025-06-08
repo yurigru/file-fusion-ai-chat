@@ -120,13 +120,11 @@ const SchematicComparison = ({ comparisonFiles, onCompare }: SchematicComparison
     }
 
     return (
-      <UITable>
-        <TableHeader>
+      <UITable>        <TableHeader>
           <TableRow>
             <TableHead>Reference</TableHead>
             <TableHead>Value</TableHead>
             <TableHead>Quantity</TableHead>
-            <TableHead>Manufacturer</TableHead>
             <TableHead>Part Number</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
@@ -143,11 +141,9 @@ const SchematicComparison = ({ comparisonFiles, onCompare }: SchematicComparison
                 isAdded ? "bg-added/10" : 
                 isDeleted ? "bg-deleted/10" : 
                 isChanged ? "bg-changed/10" : ""
-              }>
-                <TableCell>{component.reference}</TableCell>
+              }>                <TableCell>{component.reference}</TableCell>
                 <TableCell>{component.value}</TableCell>
                 <TableCell>{component.quantity}</TableCell>
-                <TableCell>{component.manufacturer || '-'}</TableCell>
                 <TableCell>{component.partNumber || '-'}</TableCell>
                 <TableCell className={
                   isAdded ? "text-added font-medium" : 

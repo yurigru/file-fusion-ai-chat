@@ -88,8 +88,7 @@ const ExportOptions = ({
     // Create blob and download
     downloadFile(htmlContent, `comparison-${file1Name}-${file2Name}.html`, 'text/html');
   };
-  
-  const generateBOMTable = (components: ElectronicComponent[], result: ComparisonResult) => {
+    const generateBOMTable = (components: ElectronicComponent[], result: ComparisonResult) => {
     return `
       <h2>Component Comparison</h2>
       <table>
@@ -98,7 +97,6 @@ const ExportOptions = ({
             <th>Reference</th>
             <th>Value</th>
             <th>Quantity</th>
-            <th>Manufacturer</th>
             <th>Part Number</th>
             <th>Status</th>
           </tr>
@@ -111,13 +109,11 @@ const ExportOptions = ({
             const isChanged = result.changed.some(change => change.line === index);
             const status = isAdded ? 'Added' : isDeleted ? 'Deleted' : isChanged ? 'Changed' : 'Unchanged';
             const rowClass = isAdded ? 'added' : isDeleted ? 'deleted' : isChanged ? 'changed' : '';
-            
-            return `
+              return `
               <tr class="${rowClass}">
                 <td>${component.reference}</td>
                 <td>${component.value}</td>
                 <td>${component.quantity}</td>
-                <td>${component.manufacturer || '-'}</td>
                 <td>${component.partNumber || '-'}</td>
                 <td>${status}</td>
               </tr>
@@ -192,10 +188,9 @@ const ExportOptions = ({
     
     const { file1Name, file2Name, fileType } = comparedFiles;
     let csvContent = '';
-    
-    if (fileType === 'bom' && components.length > 0) {
+      if (fileType === 'bom' && components.length > 0) {
       // Header
-      csvContent = 'Reference,Value,Quantity,Manufacturer,Part Number,Status\n';
+      csvContent = 'Reference,Value,Quantity,Part Number,Status\n';
       
       // Data rows
       components.forEach((component, index) => {
@@ -204,7 +199,7 @@ const ExportOptions = ({
         const isChanged = comparisonResult.changed.some(change => change.line === index);
         const status = isAdded ? 'Added' : isDeleted ? 'Deleted' : isChanged ? 'Changed' : 'Unchanged';
         
-        csvContent += `"${component.reference}","${component.value}",${component.quantity},"${component.manufacturer || ''}","${component.partNumber || ''}","${status}"\n`;
+        csvContent += `"${component.reference}","${component.value}",${component.quantity},"${component.partNumber || ''}","${status}"\n`;
       });
     } else if (fileType === 'netlist' && connections.length > 0) {
       // Header

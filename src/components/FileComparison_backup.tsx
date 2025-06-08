@@ -20,8 +20,7 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
   const [addedTable, setAddedTable] = useState<BOMRow[]>([]);
   const [deletedTable, setDeletedTable] = useState<BOMRow[]>([]);
   const [changedTable, setChangedTable] = useState<BOMRow[]>([]);
-  
-  const { file1, file2, result } = comparisonFiles;
+    const { file1, file2, result } = comparisonFiles;
 
   const updateVisibleLines = () => {
     if (!result) return;
@@ -88,9 +87,7 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
       
       if (isXML) {
         console.log("XML comparison result:", result);
-        
-        // Create tables from component data
-        if (result.addedComponents && result.addedComponents.length > 0) {
+          // Create tables from component data        if (result.addedComponents && result.addedComponents.length > 0) {
           setAddedTable(
             result.addedComponents.map(comp => ({
               REFDES: comp.reference || '',
@@ -103,9 +100,7 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
           );
         } else {
           setAddedTable([]);
-        }
-
-        if (result.deletedComponents && result.deletedComponents.length > 0) {
+        }        if (result.deletedComponents && result.deletedComponents.length > 0) {
           setDeletedTable(
             result.deletedComponents.map(comp => ({
               REFDES: comp.reference || '',
@@ -114,8 +109,7 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
               PACKAGE: comp.footprint || '',
               DESCRIPTION: comp.description || '',
               OPT: ''
-            }))
-          );
+            }))          );
         } else {
           setDeletedTable([]);
         }
@@ -143,8 +137,7 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
         });
         
         // Special message for no changes
-        if (!result.addedComponents?.length && !result.deletedComponents?.length && !result.changedComponents?.length) {
-          console.log("No differences found between XML files");
+        if (!result.addedComponents?.length && !result.deletedComponents?.length && !result.changedComponents?.length) {          console.log("No differences found between XML files");
         }
       } else {
         // Non-XML files
@@ -162,14 +155,13 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
     if (line.startsWith('~ ')) return 'bg-changed/10 text-changed';
     return '';
   };
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">File Comparison</h3>
         <Button
           onClick={onCompare}
-          disabled={!file1 || !file2}
+          disabled={!file1 || !file2} // Note: This button will not have the loading state
           className="flex items-center space-x-2"
         >
           <ArrowLeftRight className="h-4 w-4 mr-2" />
