@@ -241,7 +241,7 @@ const Index = () => {
           console.log("BOM comparison statistics:", data.statistics);
           toast.success(`Comparison completed: ${data.statistics.total_changes} total changes found`);
         }        // Map the backend response to the frontend component data structure
-        const addedComponents = (data.added || []).map(comp => ({
+        const addedComponents = (data.addedComponents || []).map(comp => ({
           id: comp.reference || "",
           reference: comp.reference || "",
           value: comp.quantity || "",
@@ -252,7 +252,7 @@ const Index = () => {
           quantity: parseInt(comp.quantity || "0")
         }));
         
-        const deletedComponents = (data.removed || []).map(comp => ({
+        const deletedComponents = (data.deletedComponents || []).map(comp => ({
           id: comp.reference || "",
           reference: comp.reference || "",
           value: comp.quantity || "",
@@ -261,7 +261,7 @@ const Index = () => {
           manufacturer: comp.manufacturer || "",
           footprint: comp.footprint || "",
           quantity: parseInt(comp.quantity || "0")
-        }));const changedComponents = (data.changed || []).map(chg => {
+        }));        const changedComponents = (data.changedComponents || []).map(chg => {
           console.log("Debug changed component:", chg);
           console.log("Debug original fields:", chg?.original ? Object.keys(chg.original) : "No original object");
           console.log("Debug modified fields:", chg?.modified ? Object.keys(chg.modified) : "No modified object");

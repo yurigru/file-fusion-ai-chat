@@ -97,7 +97,7 @@ const ExportOptions = ({
             <th>Reference</th>
             <th>Value</th>
             <th>Quantity</th>
-            <th>Part Number</th>
+            <th>Part Name</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -114,7 +114,7 @@ const ExportOptions = ({
                 <td>${component.reference}</td>
                 <td>${component.value}</td>
                 <td>${component.quantity}</td>
-                <td>${component.partNumber || '-'}</td>
+                <td>${component.manufacturer || '-'}</td>
                 <td>${status}</td>
               </tr>
             `;

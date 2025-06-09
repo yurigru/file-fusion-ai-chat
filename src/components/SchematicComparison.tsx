@@ -125,7 +125,7 @@ const SchematicComparison = ({ comparisonFiles, onCompare }: SchematicComparison
             <TableHead>Reference</TableHead>
             <TableHead>Value</TableHead>
             <TableHead>Quantity</TableHead>
-            <TableHead>Part Number</TableHead>
+            <TableHead>Part Name</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
@@ -144,7 +144,7 @@ const SchematicComparison = ({ comparisonFiles, onCompare }: SchematicComparison
               }>                <TableCell>{component.reference}</TableCell>
                 <TableCell>{component.value}</TableCell>
                 <TableCell>{component.quantity}</TableCell>
-                <TableCell>{component.partNumber || '-'}</TableCell>
+                <TableCell>{component.manufacturer || '-'}</TableCell>
                 <TableCell className={
                   isAdded ? "text-added font-medium" : 
                   isDeleted ? "text-deleted font-medium" : 

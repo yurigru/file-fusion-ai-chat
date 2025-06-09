@@ -78,14 +78,12 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
   const exportToCSV = () => {
     const csvRows = [];
       // Header (without manufacturer)
-    csvRows.push(['Change Type', 'Reference', 'Part Number', 'Quantity', 'Package', 'Description'].join(','));
-    
-    // Added components
-    addedComponents.forEach(comp => {
-      csvRows.push([
+    csvRows.push(['Change Type', 'Reference', 'Part Name', 'Quantity', 'Package', 'Description'].join(','));
+      // Added components
+    addedComponents.forEach(comp => {      csvRows.push([
         'Added',
         comp.reference || '',
-        comp.partNumber || '',
+        comp.partNumber || '',  // Use partNumber field (which contains PART-NUM)
         comp.quantity || '',
         comp.footprint || '',
         comp.description || ''
@@ -93,32 +91,28 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
     });
     
     // Removed components
-    deletedComponents.forEach(comp => {
-      csvRows.push([
+    deletedComponents.forEach(comp => {      csvRows.push([
         'Removed',
         comp.reference || '',
-        comp.partNumber || '',
+        comp.partNumber || '',  // Use partNumber field (which contains PART-NUM)
         comp.quantity || '',
         comp.footprint || '',
         comp.description || ''
       ].map(field => `"${field}"`).join(','));
     });
-    
-    // Changed components
-    changedComponents.forEach(chg => {
-      csvRows.push([
+      // Changed components
+    changedComponents.forEach(chg => {      csvRows.push([
         'Changed (Old)',
         chg.reference || '',
-        chg.original?.partNumber || '',
+        chg.original?.partNumber || '',  // Use partNumber field (which contains PART-NUM)
         chg.original?.quantity || '',
         chg.original?.footprint || '',
         chg.original?.description || ''
       ].map(field => `"${field}"`).join(','));
-      
-      csvRows.push([
+        csvRows.push([
         'Changed (New)',
         chg.reference || '',
-        chg.modified?.partNumber || '',
+        chg.modified?.partNumber || '',  // Use partNumber field (which contains PART-NUM)
         chg.modified?.quantity || '',
         chg.modified?.footprint || '',
         chg.modified?.description || ''
@@ -159,8 +153,7 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
       report.push('');
     }
     
-    if (addedComponents.length > 0) {
-      report.push(`Added Components (${addedComponents.length}):`);
+    if (addedComponents.length > 0) {      report.push(`Added Components (${addedComponents.length}):`);
       (addedComponents as any[]).forEach(comp => {
         const ref = comp.REFDES || comp.reference || comp.Reference || '';
         const partNum = comp.PartNumber || comp.partNumber || comp['PART-NUM'] || '';
@@ -181,8 +174,7 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
       report.push('');
     }
     
-    if (changedComponents.length > 0) {
-      report.push(`Changed Components (${changedComponents.length}):`);
+    if (changedComponents.length > 0) {      report.push(`Changed Components (${changedComponents.length}):`);
       (changedComponents as any[]).forEach(chg => {
         const ref = chg.Reference || chg.reference || '';
         const original = chg.Original || chg.original || {};
@@ -225,67 +217,70 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
       <td className="p-2 border">{comp.footprint || ''}</td>
       <td className="p-2 border text-sm">{comp.description || ''}</td>
     </tr>
-  );
-
-  const renderChangedComponentRow = (chg: any, i: number) => {
-    // Debug logging for each row render
-    console.log(`🔍 Rendering changed row ${i}:`, chg);
-    console.log(`🔍 Row ${i} keys:`, Object.keys(chg || {}));
+  );  const renderChangedComponentRow = (chg: any, i: number) => {
+    console.log(`🎨 Rendering changed component row ${i}:`, chg);
     
     // Backend returns lowercase field names: 'reference', 'original', 'modified'
     const ref = chg.reference || '';
     const original = chg.original || {};
     const modified = chg.modified || {};
     
-    console.log(`🔍 Row ${i} reference:`, ref);
-    console.log(`🔍 Row ${i} original:`, original);
-    console.log(`🔍 Row ${i} original keys:`, Object.keys(original));
-    console.log(`🔍 Row ${i} modified:`, modified);
-    console.log(`🔍 Row ${i} modified keys:`, Object.keys(modified));
-    
-    // Test specific field access
-    console.log(`🔍 Row ${i} original.partNumber:`, original?.partNumber);
-    console.log(`🔍 Row ${i} modified.partNumber:`, modified?.partNumber);
-    console.log(`🔍 Row ${i} original.quantity:`, original?.quantity);
-    console.log(`🔍 Row ${i} modified.quantity:`, modified?.quantity);
-      const hasPartNumberChange = (original?.partNumber) !== (modified?.partNumber);
-    const hasQuantityChange = (original?.quantity) !== (modified?.quantity);
-    const hasPackageChange = (original?.footprint) !== (modified?.footprint);
-    const hasDescriptionChange = (original?.description) !== (modified?.description);
+    console.log(`🎨 Fields - ref: ${ref}, original:`, original, 'modified:', modified);
+
+    // Helper function to render field changes in a clear inline format
+    const renderFieldChange = (fieldName: string, originalValue: string | undefined, modifiedValue: string | undefined) => {
+      const oldVal = originalValue || '';
+      const newVal = modifiedValue || '';
+      
+      console.log(`🎨 Field ${fieldName}: "${oldVal}" → "${newVal}"`);
+      
+      if (oldVal !== newVal && (oldVal || newVal)) {
+        return (
+          <div className="flex items-center gap-2 font-mono text-sm">
+            <span className="text-red-600 line-through decoration-2 bg-red-50 px-2 py-1 rounded border">
+              {oldVal || '(empty)'}
+            </span>
+            <span className="text-blue-500 font-bold text-lg">→</span>
+            <span className="text-green-600 font-semibold bg-green-50 px-2 py-1 rounded border border-green-200">
+              {newVal || '(empty)'}
+            </span>
+          </div>
+        );
+      }
+      
+      // If no change, show the current value normally
+      return (
+        <span className="text-gray-700 font-medium">
+          {oldVal || newVal || '-'}
+        </span>
+      );
+    };
+
+    const hasAnyChange = 
+      (original?.partNumber || '') !== (modified?.partNumber || '') ||
+      (original?.quantity || '') !== (modified?.quantity || '') ||
+      (original?.footprint || '') !== (modified?.footprint || '') ||
+      (original?.description || '') !== (modified?.description || '');
+
+    console.log(`🎨 Component ${ref} has changes: ${hasAnyChange}`);
 
     return (
-      <tr key={i} className="hover:bg-gray-50">
-        <td className="p-2 border font-medium">{ref}</td>
-        <td className={`p-2 border font-mono text-sm ${hasPartNumberChange ? 'bg-yellow-50' : ''}`}>
-          <div className="space-y-1">
-            <div className="text-red-600">- {original?.partNumber || ''}</div>
-            <div className="text-green-600">+ {modified?.partNumber || ''}</div>
-          </div>
+      <tr key={i} className={`hover:bg-gray-50 ${hasAnyChange ? 'border-l-4 border-l-blue-500 bg-blue-50' : 'bg-gray-50'}`}>
+        <td className="p-3 border font-bold text-gray-900 bg-blue-100">
+          {ref}
+          {hasAnyChange && <span className="ml-2 text-blue-600 text-xs">● CHANGED</span>}
         </td>
-        <td className={`p-2 border text-center ${hasQuantityChange ? 'bg-yellow-50' : ''}`}>
-          <div className="space-y-1">
-            <div className="text-red-600">- {original?.quantity || ''}</div>
-            <div className="text-green-600">+ {modified?.quantity || ''}</div>
-          </div>        </td>
-        <td className={`p-2 border ${hasPackageChange ? 'bg-yellow-50' : ''}`}>
-          {hasPackageChange ? (
-            <div className="space-y-1">
-              <div className="text-red-600">- {original?.footprint || ''}</div>
-              <div className="text-green-600">+ {modified?.footprint || ''}</div>
-            </div>
-          ) : (
-            <span>{original?.footprint || ''}</span>
-          )}
+        <td className="p-3 border">
+          {renderFieldChange('partNumber', original?.partNumber, modified?.partNumber)}
         </td>
-        <td className={`p-2 border text-sm ${hasDescriptionChange ? 'bg-yellow-50' : ''}`}>
-          {hasDescriptionChange ? (
-            <div className="space-y-1">
-              <div className="text-red-600">- {original?.description || ''}</div>
-              <div className="text-green-600">+ {modified?.description || ''}</div>
-            </div>
-          ) : (
-            <span>{original?.description || ''}</span>
-          )}
+        <td className="p-3 border text-center">
+          {renderFieldChange('quantity', original?.quantity, modified?.quantity)}
+        </td>
+        <td className="p-3 border">
+          {renderFieldChange('footprint', original?.footprint, modified?.footprint)}
+        </td>
+        <td className="p-3 border text-sm">
+          {renderFieldChange('description', original?.description, modified?.description)}
         </td>
       </tr>
     );
@@ -419,7 +414,7 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse border border-gray-300">                <thead>                  <tr className="bg-green-50">
                     <th className="p-2 border text-left">Reference</th>
-                    <th className="p-2 border text-left">Part Number</th>
+                    <th className="p-2 border text-left">Part Name</th>
                     <th className="p-2 border text-left">Quantity</th>
                     <th className="p-2 border text-left">Package</th>
                     <th className="p-2 border text-left">Description</th>
@@ -446,7 +441,7 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse border border-gray-300">                <thead>                  <tr className="bg-red-50">
                     <th className="p-2 border text-left">Reference</th>
-                    <th className="p-2 border text-left">Part Number</th>
+                    <th className="p-2 border text-left">Part Name</th>
                     <th className="p-2 border text-left">Quantity</th>
                     <th className="p-2 border text-left">Package</th>
                     <th className="p-2 border text-left">Description</th>
@@ -468,28 +463,32 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
               Changed Components
               <Badge variant="outline">{changedComponents.length}</Badge>
             </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4 text-sm text-gray-600">
-              <div className="flex items-center gap-4">
+          </CardHeader>          <CardContent>
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-semibold text-blue-900 mb-3">How to Read Changes:</h4>
+              <div className="flex items-center gap-6 flex-wrap text-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-red-50 border"></div>
-                  <span>Removed values</span>
+                  <div className="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
+                  <span className="line-through text-red-600">Old values</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-green-50 border"></div>
-                  <span>Added values</span>
+                  <span className="text-blue-500 font-bold text-lg">→</span>
+                  <span className="text-gray-600">indicates change to</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-yellow-50 border"></div>
-                  <span>Changed fields</span>
+                  <div className="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
+                  <span className="font-semibold text-green-600">New values</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                  <span className="text-blue-700">Blue border = component with changes</span>
                 </div>
               </div>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse border border-gray-300">                <thead>                  <tr className="bg-blue-50">
                     <th className="p-2 border text-left">Reference</th>
-                    <th className="p-2 border text-left">Part Number</th>
+                    <th className="p-2 border text-left">Part Name</th>
                     <th className="p-2 border text-left">Quantity</th>
                     <th className="p-2 border text-left">Package</th>
                     <th className="p-2 border text-left">Description</th>

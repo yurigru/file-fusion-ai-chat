@@ -281,60 +281,7 @@ def format_part(part):
         part.get("ComponentName", "") or
         part.get("Name", "")
     ).strip()
-    
-    # Try to extract manufacturer from PART-NAME (actual manufacturer part number)
-    manufacturer = ""
-    if part_name:        # Common manufacturer prefixes in part names
-        manufacturer_prefixes = {
-            'TI': 'Texas Instruments',
-            'AD': 'Analog Devices', 
-            'LT': 'Linear Technology',
-            'MAX': 'Maxim',
-            'LM': 'National Semiconductor',
-            'NE': 'Signetics',
-            'SN': 'Texas Instruments',
-            'MC': 'Motorola',
-            'LF': 'National Semiconductor',
-            'LP': 'National Semiconductor',
-            'STM': 'STMicroelectronics',
-            'NXP': 'NXP',
-            'ON': 'ON Semiconductor',
-            'IR': 'Infineon',
-            'DS': 'Maxim',
-            'MCP': 'Microchip',
-            'ADP': 'Analog Devices',
-            'LTC': 'Linear Technology',
-            # Common part name patterns
-            'CRCW': 'Vishay',        # Vishay chip resistors
-            'CR0': 'Vishay',         # Vishay resistors  
-            'BLM': 'Murata',         # Murata ferrite beads
-            'GRM': 'Murata',         # Murata capacitors
-            'EMK': 'Taiyo Yuden',    # Taiyo Yuden capacitors
-            'TMK': 'Taiyo Yuden',    # Taiyo Yuden capacitors
-            'C0G': 'Kemet',          # Kemet capacitors
-            'C0805': 'Generic',      # Generic 0805 package
-            'C0603': 'Generic',      # Generic 0603 package
-            'C0402': 'Generic',      # Generic 0402 package
-            'R0805': 'Generic',      # Generic 0805 resistor
-            'R0603': 'Generic',      # Generic 0603 resistor  
-            'R0402': 'Generic',      # Generic 0402 resistor
-            'S0402': 'Generic',      # Generic 0402 component
-            'D101': 'Generic',       # Generic diode/resistor
-        }
-        
-        # Try to match manufacturer prefixes
-        part_name_upper = part_name.upper()
-        for prefix, manufacturer_name in manufacturer_prefixes.items():
-            if part_name_upper.startswith(prefix):
-                manufacturer = manufacturer_name
-                break
-        
-        # For generic components, try to identify by pattern
-        if not manufacturer:
-            if part_name_upper.startswith('R') and any(c.isdigit() for c in part_name_upper[1:4]):
-                manufacturer = "Generic"  # Generic resistor
-            elif part_name_upper.startswith('C') and any(c.isdigit() for c in part_name_upper[1:4]):
-                manufacturer = "Generic"  # Generic capacitor
+      # No longer extracting manufacturer - using PART-NAME directly
     
     # Check if component is active (OPT != "NA")
     opt_value = part.get("OPT", "") or part.get("Optional", "")
@@ -388,7 +335,7 @@ def format_part(part):
             part.get("number", "") or
             part.get("ItemNumber", "")
         ).strip(),
-        "manufacturer": manufacturer,  # Now correctly extracted from PART-NUM
+        "manufacturer": part_name,  # Use PART-NAME instead of manufacturer
         "corpNum": (  # CORP-NUM is company internal ID, not manufacturer
             part.get("CORP-NUM", "") or
             part.get("CORP_NUM", "") or
@@ -510,14 +457,12 @@ async def compare_bom(old_file: UploadFile = File(...), new_file: UploadFile = F
             logger.info(f"Changed components: {[comp['reference'] for comp in changed[:3]]}")
         
         # Check if we found anything        if not added and not removed and not changed:
-            logger.warning("No differences found between the BOMs. This could be because the files couldn't be parsed correctly.")
-
-        # FIXED: Return using consistent field naming that matches frontend expectations
+            logger.warning("No differences found between the BOMs. This could be because the files couldn't be parsed correctly.")        # FIXED: Return using consistent field naming that matches frontend expectations
         result = {
-            "added": added,
-            "removed": removed,
-            "changed": changed,
-            "validation_warnings": validation_warnings,
+            "addedComponents": added,
+            "deletedComponents": removed,
+            "changedComponents": changed,
+            "validationWarnings": validation_warnings,
             "statistics": {
                 "old_components_count": len(old_components),
                 "new_components_count": len(new_components),

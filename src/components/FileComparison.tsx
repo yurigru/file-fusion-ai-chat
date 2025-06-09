@@ -20,7 +20,6 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
   const [addedTable, setAddedTable] = useState<BOMRow[]>([]);
   const [deletedTable, setDeletedTable] = useState<BOMRow[]>([]);
   const [changedTable, setChangedTable] = useState<BOMRow[]>([]);
-  
   const { file1, file2, result } = comparisonFiles;
 
   const updateVisibleLines = () => {
@@ -88,7 +87,6 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
       
       if (isXML) {
         console.log("XML comparison result:", result);
-        
         // Create tables from component data
         if (result.addedComponents && result.addedComponents.length > 0) {
           setAddedTable(
@@ -169,7 +167,7 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
         <h3 className="text-lg font-medium">File Comparison</h3>
         <Button
           onClick={onCompare}
-          disabled={!file1 || !file2}
+          disabled={!file1 || !file2} // Note: This button will not have the loading state
           className="flex items-center space-x-2"
         >
           <ArrowLeftRight className="h-4 w-4 mr-2" />
