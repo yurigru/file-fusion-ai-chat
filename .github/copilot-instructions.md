@@ -1,0 +1,1 @@
+use proper PowerShell syntax ; instead of && to concatenate commands

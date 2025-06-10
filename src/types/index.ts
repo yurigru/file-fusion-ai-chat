@@ -29,18 +29,18 @@ export interface NetlistConnection {
 }
 
 export interface ComparisonResult {
-  added: string[];
-  deleted: string[];
-  changed: {
+  // Legacy format for text comparisons
+  added?: string[];
+  deleted?: string[];
+  changed?: {
     line: number;
     original: string;
     modified: string;
   }[];
-  // For BOM specific comparisons
-  addedComponents?: ElectronicComponent[];
-  deletedComponents?: ElectronicComponent[];
-  changedComponents?: {
-    id: string;
+  // For BOM specific comparisons - these are the main fields used by BOMCompare
+  addedComponents: ElectronicComponent[];
+  deletedComponents: ElectronicComponent[];
+  changedComponents: {
     reference: string;
     original: Partial<ElectronicComponent>;
     modified: Partial<ElectronicComponent>;

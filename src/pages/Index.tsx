@@ -8,6 +8,7 @@ import AIChat from "@/components/AIChat";
 import ExportOptions from "@/components/ExportOptions";
 import FileTable from "@/components/FileTable";
 import BOMCompare from "@/components/BOMCompare";
+
 import { UploadedFile, ComparisonFiles, ComparisonResult, ElectronicComponent, NetlistConnection } from "@/types";
 import { toast } from "@/components/ui/sonner";
 import { ArrowLeftRight, Plus, Minus, Check, RefreshCw } from "lucide-react"; // Import RefreshCw
@@ -54,11 +55,9 @@ const Index = () => {
     if (selectedFiles.length === 1) {
       const file = selectedFiles[0];
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
-      if (ext === "xml") {
-        try {
+      if (ext === "xml") {        try {
           const parser = new XMLParser();
           const result = parser.parse(file.content);
-          console.log('[fast-xml-parser] parsed result:', result);
           // Support both <BOM> and <SHOWSRVCALLS> roots
           let details = result?.BOM?.DETAILS || result?.SHOWSRVCALLS?.DETAILS;
           let records = details?.RECORD;
@@ -226,21 +225,17 @@ const Index = () => {
           const errorData = await response.json();
           throw new Error(errorData.detail || "BOM comparison failed");
         }
-          const data = await response.json();
-        console.log("BOM comparison response:", data);
-        
-        // Show validation warnings if any
+          const data = await response.json();        // Show validation warnings if any
         if (data.validation_warnings && data.validation_warnings.length > 0) {
           data.validation_warnings.forEach((warning: string) => {
             toast.error(`Warning: ${warning}`);
           });
         }
         
-        // Log statistics
+        // Show statistics
         if (data.statistics) {
-          console.log("BOM comparison statistics:", data.statistics);
           toast.success(`Comparison completed: ${data.statistics.total_changes} total changes found`);
-        }        // Map the backend response to the frontend component data structure
+        }// Map the backend response to the frontend component data structure
         const addedComponents = (data.addedComponents || []).map(comp => ({
           id: comp.reference || "",
           reference: comp.reference || "",
@@ -262,13 +257,9 @@ const Index = () => {
           footprint: comp.footprint || "",
           quantity: parseInt(comp.quantity || "0")
         }));        const changedComponents = (data.changedComponents || []).map(chg => {
-          console.log("Debug changed component:", chg);
-          console.log("Debug original fields:", chg?.original ? Object.keys(chg.original) : "No original object");
-          console.log("Debug modified fields:", chg?.modified ? Object.keys(chg.modified) : "No modified object");
-          
           // Ensure we're accessing the data with proper format checking
           if (!chg || !chg.original || !chg.modified) {
-            console.warn("Invalid changed component data structure:", chg);            return {
+            return {
               id: chg?.reference || "unknown",
               reference: chg?.reference || "unknown",
               original: {
@@ -304,42 +295,32 @@ const Index = () => {
             },
             modified: {
               partNumber: chg.modified.partNumber || "",
-              quantity: parseInt(chg.modified.quantity || "0"),
-              value: chg.modified.quantity || "",
+              quantity: parseInt(chg.modified.quantity || "0"),              value: chg.modified.quantity || "",
               reference: chg.modified.reference || chg.reference,
               footprint: chg.modified.footprint || "",
               description: chg.modified.description || "",
               manufacturer: chg.modified.manufacturer || "",
             },
           };
-          console.log("Mapped changed component:", mappedComponent);
           return mappedComponent;
         });
-          console.log("Mapped component data:", {
-          added: addedComponents.length,
-          deleted: deletedComponents.length,
-          changed: changedComponents.length
-        });
+
+        const finalResult = {
+          // Empty arrays for legacy fields
+          added: [],
+          deleted: [],
+          changed: [],
+          // Map the component data
+          addedComponents,
+          deletedComponents,
+          changedComponents,
+          // Add validation warnings and statistics
+          validationWarnings: data.validation_warnings || [],
+          statistics: data.statistics || {}        };
         
-        // Additional debug: Log the actual mapped data
-        if (changedComponents.length > 0) {
-          console.log("First mapped changed component:", changedComponents[0]);
-        }
         setComparisonFiles({
           ...comparisonFiles,
-          result: {
-            // Empty arrays for legacy fields
-            added: [],
-            deleted: [],
-            changed: [],
-            // Map the component data
-            addedComponents,
-            deletedComponents,
-            changedComponents,
-            // Add validation warnings and statistics
-            validationWarnings: data.validation_warnings || [],
-            statistics: data.statistics || {}
-          },
+          result: finalResult,
         });
 
         setActiveTab("compare");
@@ -385,7 +366,14 @@ const Index = () => {
           });
         }
       }
-      return { added, deleted, changed };
+      return { 
+        added, 
+        deleted, 
+        changed,
+        addedComponents: [],
+        deletedComponents: [],
+        changedComponents: []
+      };
     };
 
     const result = simulateComparison();
@@ -445,15 +433,7 @@ const Index = () => {
     });
     
     setConnections(mockConnections);
-  };
-
-  // Add this before the return statement
-  if (tablePreview) {
-    // eslint-disable-next-line no-console
-    console.log('[FileTable Preview] tablePreview:', tablePreview);
-  }
-
-  return (
+  };  return (
     <div className="container mx-auto py-8 max-w-6xl">
       <div className="space-y-8">
         <div>
@@ -466,8 +446,7 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <div className="flex items-center justify-between">
-                <TabsList>
+              <div className="flex items-center justify-between">                <TabsList>
                   <TabsTrigger value="upload">Upload</TabsTrigger>
                   <TabsTrigger value="files">Files ({files.length})</TabsTrigger>
                   <TabsTrigger value="compare">Compare</TabsTrigger>
@@ -503,17 +482,16 @@ const Index = () => {
                     <FileTable data={tablePreview} />
                   </div>
                 )}
-              </TabsContent>
-
-              <TabsContent value="compare" className="space-y-4">
+              </TabsContent>              <TabsContent value="compare" className="space-y-4">
                 <FileComparison comparisonFiles={comparisonFiles} onCompare={handleCompare} />
                 {fileType === "bom" && (
-                  <BOMCompare comparisonResult={comparisonFiles.result} />
+                  <div>
+                    <BOMCompare comparisonResult={comparisonFiles.result} />
+                  </div>
                 )}
                 {fileType === "netlist" && (
                   <SchematicComparison comparisonFiles={comparisonFiles} onCompare={handleCompare} />
-                )}
-              </TabsContent>
+                )}              </TabsContent>
             </Tabs>
           </div>
 
