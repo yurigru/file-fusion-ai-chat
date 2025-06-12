@@ -1,0 +1,1288 @@
+from fastapi import FastAPI, UploadFile, File, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from typing import List, Dict, Any, Optional, Tuple, Union
+import xml.etree.ElementTree as ET
+import logging
+import sys
+import traceback
+import re
+from enum import Enum
+from dataclasses import dataclass, asdict
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("bom-compare")
+
+# Enhanced BOM Comparison Architecture
+class ChangeImpact(Enum):
+    CRITICAL = "critical"
+    IMPORTANT = "important" 
+    MINOR = "minor"
+    INFORMATIONAL = "informational"
+
+class ChangeType(Enum):
+    ADDITION = "addition"
+    REMOVAL = "removal"
+    SUBSTITUTION = "substitution"
+    MODIFICATION = "modification"
+    VALUE_CHANGE = "value_change"
+    QUANTITY_CHANGE = "quantity_change"
+    FOOTPRINT_CHANGE = "footprint_change"
+
+@dataclass
+class FieldChange:
+    field_name: str
+    old_value: str
+    new_value: str
+    change_type: ChangeType
+    impact_level: ChangeImpact
+    description: str
+    requires_review: bool
+    confidence_score: float = 1.0
+    
+    def to_dict(self):
+        return asdict(self)
+
+@dataclass
+class ComponentChange:
+    reference: str
+    change_type: ChangeType
+    impact_level: ChangeImpact
+    field_changes: List[FieldChange]
+    original_component: Dict[str, Any]
+    modified_component: Dict[str, Any]
+    summary: str
+    requires_engineering_review: bool
+    change_category: str = "modification"
+    risk_level: str = "medium"
+    
+    def to_dict(self):
+        result = asdict(self)
+        result['field_changes'] = [fc.to_dict() for fc in self.field_changes]
+        return result
+
+@dataclass
+class ValidationResult:
+    is_valid: bool
+    warnings: List[str]
+    errors: List[str]
+    suggestions: List[str]
+    
+    def to_dict(self):
+        return asdict(self)
+
+def expand_reference_designators(ref_string: str) -> List[str]:
+    """Expand reference designator strings like 'R1-R5' or 'C10,C11,C12' into individual references"""
+    expanded_refs = []
+    
+    # Process comma-separated references
+    for part in ref_string.split(','):
+        part = part.strip()
+        if '-' in part:
+            # Handle ranges like R1-R5 or L40-41
+            try:
+                range_parts = part.split('-')
+                if len(range_parts) == 2:
+                    base, end = range_parts
+                    
+                    # Extract prefix and number from base
+                    prefix = ''.join(c for c in base if not c.isdigit())
+                    base_num = ''.join(c for c in base if c.isdigit())
+                    
+                    # Check if end has prefix or just number
+                    if any(not c.isdigit() for c in end):
+                        # End has prefix (e.g., R1-R5)
+                        expanded_refs.extend([base, end])
+                    else:
+                        # End is just number (e.g., L40-41)
+                        try:
+                            start_num = int(base_num)
+                            end_num = int(end)
+                            expanded_refs.extend([f"{prefix}{i}" for i in range(start_num, end_num + 1)])
+                        except ValueError:
+                            # If parsing fails, add as is
+                            expanded_refs.append(part)
+            except Exception as e:
+                logger.warning(f"Error expanding range '{part}': {str(e)}")
+                expanded_refs.append(part)
+        else:
+            expanded_refs.append(part)
+    
+    return expanded_refs
+
+def try_fallback_parsing(root, warnings: List[str]) -> Tuple[Dict[str, Dict[str, str]], List[str]]:
+    """Try alternative parsing methods when primary parsing fails"""
+    components = {}
+    
+    # Format 2: <Component> structure
+    try:
+        logger.info("Trying Component structure as fallback...")
+        for comp in root.findall(".//Component"):
+            ref = comp.findtext("Reference", "").strip()
+            if ref:
+                components[ref] = {
+                    "CORP-NUM": comp.findtext("Manufacturer", "").strip(),
+                    "DESCRIPTION": comp.findtext("Description", "").strip(),
+                    "NUMBER": comp.findtext("NUMBER", "").strip(),
+                    "OPT": "",
+                    "PACKAGE": "",
+                    "PART-NAME": "",
+                    "PART-NUM": comp.findtext("PartNumber", "").strip(),
+                    "QTY": comp.findtext("Value", "").strip(),
+                    "REFDES": ref
+                }
+        logger.info(f"Parsed {len(components)} components with Reference from Component elements")
+        if components:
+            return components, warnings
+    except Exception as e:
+        logger.error(f"Error in Component fallback: {str(e)}")
+        warnings.append(f"Component fallback parsing failed: {str(e)}")
+    
+    # Format 3: Generic element search
+    try:
+        logger.info("Trying generic XML element search as final fallback...")
+        possible_component_tags = ["part", "component", "item", "element", "row", "component_info", "PART", "COMPONENT"]
+        possible_ref_tags = ["Reference", "Ref", "RefDes", "REFDES", "Designator", "RefDesignator", "id", "name"]
+        
+        for tag in possible_component_tags:
+            components_found = 0
+            for comp in root.findall(f".//{tag}"):
+                ref = None
+                
+                # Try to find reference designator
+                for ref_tag in possible_ref_tags:
+                    if comp.findtext(ref_tag):
+                        ref = comp.findtext(ref_tag).strip()
+                        break
+                
+                if not ref:
+                    for ref_tag in possible_ref_tags:
+                        if ref_tag.lower() in [k.lower() for k in comp.attrib.keys()]:
+                            for k, v in comp.attrib.items():
+                                if k.lower() == ref_tag.lower():
+                                    ref = v.strip()
+                                    break
+                            if ref:
+                                break
+                
+                if ref:
+                    comp_data = {
+                        "CORP-NUM": "",
+                        "DESCRIPTION": "",
+                        "NUMBER": "",
+                        "OPT": "",
+                        "PACKAGE": "",
+                        "PART-NAME": "",
+                        "PART-NUM": "",
+                        "QTY": "1",
+                        "REFDES": ref
+                    }
+                    
+                    # Extract from attributes
+                    for key, value in comp.attrib.items():
+                        key_lower = key.lower()
+                        if key_lower in ["partnumber", "part", "part-num", "pn", "part-number", "part_num"]:
+                            comp_data["PART-NUM"] = value.strip()
+                        elif key_lower in ["description", "desc", "descr"]:
+                            comp_data["DESCRIPTION"] = value.strip()
+                        elif key_lower in ["quantity", "qty", "count"]:
+                            comp_data["QTY"] = value.strip()
+                        elif key_lower in ["package", "footprint", "pkgtype"]:
+                            comp_data["PACKAGE"] = value.strip()
+                        elif key_lower in ["corp-num", "corp_num", "corpnum", "manufacturer"]:
+                            comp_data["CORP-NUM"] = value.strip()
+                    
+                    # Extract from child elements
+                    for child in comp:
+                        tag_name = child.tag.lower()
+                        if tag_name in ["partnumber", "part", "part-num", "pn", "part-number", "part_num"]:
+                            comp_data["PART-NUM"] = child.text.strip() if child.text else ""
+                        elif tag_name in ["description", "desc", "descr"]:
+                            comp_data["DESCRIPTION"] = child.text.strip() if child.text else ""
+                        elif tag_name in ["quantity", "qty", "count"]:
+                            comp_data["QTY"] = child.text.strip() if child.text else ""
+                        elif tag_name in ["package", "footprint", "pkgtype"]:
+                            comp_data["PACKAGE"] = child.text.strip() if child.text else ""
+                        elif tag_name in ["corp-num", "corp_num", "corpnum", "manufacturer"]:
+                            comp_data["CORP-NUM"] = child.text.strip() if child.text else ""
+                    
+                    components[ref] = comp_data
+                    components_found += 1
+            
+            if components_found > 0:
+                logger.info(f"Found {components_found} components using generic tag '{tag}'")
+                break
+    except Exception as e:
+        logger.error(f"Error in generic XML search: {str(e)}")
+        warnings.append(f"Generic parsing failed: {str(e)}")
+    
+    if not components:
+        warnings.append("All XML parsing methods failed")
+    
+    return components, warnings
+
+class BOMChangeAnalyzer:
+    """Advanced BOM change analysis with impact assessment"""
+    
+    @staticmethod
+    def analyze_field_change(field_name: str, old_value: str, new_value: str) -> FieldChange:
+        """Analyze individual field changes with intelligent impact assessment"""
+        old_val = (old_value or "").strip()
+        new_val = (new_value or "").strip()
+        
+        # Determine change type with enhanced logic
+        if not old_val and new_val:
+            change_type = ChangeType.ADDITION
+        elif old_val and not new_val:
+            change_type = ChangeType.REMOVAL
+        elif old_val != new_val:
+            field_lower = field_name.lower()
+            if field_lower in ['partnumber', 'part-num', 'part_num', 'partname', 'part-name']:
+                change_type = ChangeType.SUBSTITUTION
+            elif field_lower in ['quantity', 'qty']:
+                change_type = ChangeType.QUANTITY_CHANGE
+            elif field_lower in ['footprint', 'package']:
+                change_type = ChangeType.FOOTPRINT_CHANGE
+            else:
+                change_type = ChangeType.VALUE_CHANGE
+        else:
+            change_type = ChangeType.MODIFICATION
+        
+        # Determine impact level with enhanced criteria
+        impact_level = BOMChangeAnalyzer._calculate_field_impact(field_name, old_val, new_val)
+        
+        # Generate detailed human-readable description
+        description = BOMChangeAnalyzer._generate_change_description(field_name, old_val, new_val, change_type)
+        
+        # Enhanced engineering review determination
+        requires_review = BOMChangeAnalyzer._requires_engineering_review(field_name, old_val, new_val)
+        
+        # Calculate confidence score based on change clarity
+        confidence = BOMChangeAnalyzer._calculate_confidence_score(field_name, old_val, new_val)
+        
+        return FieldChange(
+            field_name=field_name,
+            old_value=old_val,
+            new_value=new_val,
+            change_type=change_type,
+            impact_level=impact_level,
+            description=description,
+            requires_review=requires_review,
+            confidence_score=confidence
+        )
+    
+    @staticmethod
+    def _calculate_field_impact(field_name: str, old_val: str, new_val: str) -> ChangeImpact:
+        """Calculate the impact level of a field change with enhanced logic"""
+        field_lower = field_name.lower()
+        
+        # Critical fields that affect functionality
+        if field_lower in ['partnumber', 'part-num', 'part_num', 'partname', 'part-name']:
+            # Check if it's just a formatting change vs actual part change
+            if BOMChangeAnalyzer._is_formatting_change(old_val, new_val):
+                return ChangeImpact.MINOR
+            return ChangeImpact.CRITICAL
+        
+        # Important fields that affect assembly
+        if field_lower in ['quantity', 'qty']:
+            try:
+                old_qty = float(old_val) if old_val else 0
+                new_qty = float(new_val) if new_val else 0
+                qty_change = abs(old_qty - new_qty)
+                
+                # Critical if component is added/removed or significant change
+                if (old_qty == 0 and new_qty > 0) or (old_qty > 0 and new_qty == 0):
+                    return ChangeImpact.CRITICAL
+                elif old_qty > 0 and qty_change / old_qty > 0.5:  # >50% change
+                    return ChangeImpact.IMPORTANT
+                elif qty_change > 0:
+                    return ChangeImpact.MINOR
+            except ValueError:
+                return ChangeImpact.IMPORTANT
+            
+        if field_lower in ['footprint', 'package']:
+            # Footprint changes are typically important as they affect PCB layout
+            if old_val != new_val and old_val and new_val:
+                return ChangeImpact.IMPORTANT
+            elif not old_val or not new_val:
+                return ChangeImpact.MINOR
+        
+        # Minor fields that may affect documentation or sourcing
+        if field_lower in ['description', 'desc', 'comment', 'notes']:
+            return ChangeImpact.MINOR
+        
+        # Informational fields
+        return ChangeImpact.INFORMATIONAL
+    
+    @staticmethod
+    def _is_formatting_change(old_val: str, new_val: str) -> bool:
+        """Detect if change is just formatting (whitespace, case, etc.)"""
+        if not old_val or not new_val:
+            return False
+        
+        # Remove whitespace and convert to lowercase for comparison
+        old_clean = re.sub(r'\s+', '', old_val.lower())
+        new_clean = re.sub(r'\s+', '', new_val.lower())
+        
+        return old_clean == new_clean
+    
+    @staticmethod
+    def _calculate_confidence_score(field_name: str, old_val: str, new_val: str) -> float:
+        """Calculate confidence score for the change detection"""
+        if not old_val and not new_val:
+            return 0.0
+        if not old_val or not new_val:
+            return 1.0
+        
+        # High confidence for clearly different values
+        if old_val.strip() != new_val.strip():
+            return 1.0
+        
+        # Lower confidence for subtle differences
+        return 0.8
+    
+    @staticmethod
+    def _generate_change_description(field_name: str, old_val: str, new_val: str, change_type: ChangeType) -> str:
+        """Generate human-readable change description with enhanced context"""
+        field_display = field_name.replace('_', ' ').replace('-', ' ').title()
+        
+        if change_type == ChangeType.ADDITION:
+            return f"{field_display} added: '{new_val}'"
+        elif change_type == ChangeType.REMOVAL:
+            return f"{field_display} removed: was '{old_val}'"
+        elif change_type == ChangeType.SUBSTITUTION:
+            return f"{field_display} substituted: '{old_val}' → '{new_val}'"
+        elif change_type == ChangeType.QUANTITY_CHANGE:
+            try:
+                old_qty = float(old_val) if old_val else 0
+                new_qty = float(new_val) if new_val else 0
+                change_pct = ((new_qty - old_qty) / old_qty * 100) if old_qty > 0 else 0
+                direction = "increased" if new_qty > old_qty else "decreased"
+                return f"Quantity {direction}: {old_val} → {new_val} ({change_pct:+.1f}%)"
+            except ValueError:
+                return f"Quantity changed: '{old_val}' → '{new_val}'"
+        elif change_type == ChangeType.FOOTPRINT_CHANGE:
+            return f"Package/Footprint changed: '{old_val}' → '{new_val}'"
+        else:
+            return f"{field_display} changed: '{old_val}' → '{new_val}'"
+    
+    @staticmethod
+    def _requires_engineering_review(field_name: str, old_val: str, new_val: str) -> bool:
+        """Enhanced determination of engineering review requirements"""
+        field_lower = field_name.lower()
+        
+        # Part number changes always require review unless formatting only
+        if field_lower in ['partnumber', 'part-num', 'part_num', 'partname', 'part-name']:
+            if BOMChangeAnalyzer._is_formatting_change(old_val, new_val):
+                return False
+            return True
+        
+        # Quantity changes with specific criteria
+        if field_lower in ['quantity', 'qty']:
+            try:
+                old_qty = float(old_val) if old_val else 0
+                new_qty = float(new_val) if new_val else 0
+                
+                # Review required for component addition/removal
+                if (old_qty == 0 and new_qty > 0) or (old_qty > 0 and new_qty == 0):
+                    return True
+                    
+                # Review required for significant quantity changes (>20%)
+                if old_qty > 0 and abs(old_qty - new_qty) / old_qty > 0.2:
+                    return True
+            except ValueError:
+                return True
+        
+        # Footprint changes typically require review
+        if field_lower in ['footprint', 'package'] and old_val != new_val:
+            if old_val and new_val:  # Both have values and they're different
+                return True
+        
+        return False
+    
+    @classmethod
+    def analyze_component_changes(cls, reference: str, old_comp: Dict[str, Any], new_comp: Dict[str, Any]) -> ComponentChange:
+        """Analyze all changes in a component with enhanced logic"""
+        field_changes = []
+        
+        # Enhanced field comparison with more fields
+        fields_to_compare = [
+            'partNumber', 'quantity', 'footprint', 'description', 
+            'partName', 'manufacturer', 'corpNum', 'optional'
+        ]
+        
+        for field in fields_to_compare:
+            old_val = str(old_comp.get(field, '')).strip()
+            new_val = str(new_comp.get(field, '')).strip()
+            
+            if old_val != new_val:
+                field_change = cls.analyze_field_change(field, old_val, new_val)
+                field_changes.append(field_change)
+        
+        # Determine overall component impact with enhanced logic
+        impact_levels = [fc.impact_level for fc in field_changes]
+        if ChangeImpact.CRITICAL in impact_levels:
+            overall_impact = ChangeImpact.CRITICAL
+        elif ChangeImpact.IMPORTANT in impact_levels:
+            overall_impact = ChangeImpact.IMPORTANT
+        elif ChangeImpact.MINOR in impact_levels:
+            overall_impact = ChangeImpact.MINOR
+        else:
+            overall_impact = ChangeImpact.INFORMATIONAL
+        
+        # Enhanced change type determination
+        change_types = [fc.change_type for fc in field_changes]
+        if ChangeType.SUBSTITUTION in change_types:
+            overall_change_type = ChangeType.SUBSTITUTION
+        elif ChangeType.QUANTITY_CHANGE in change_types:
+            overall_change_type = ChangeType.QUANTITY_CHANGE
+        elif ChangeType.FOOTPRINT_CHANGE in change_types:
+            overall_change_type = ChangeType.FOOTPRINT_CHANGE
+        else:
+            overall_change_type = ChangeType.MODIFICATION
+        
+        # Generate enhanced summary
+        critical_changes = [fc for fc in field_changes if fc.impact_level == ChangeImpact.CRITICAL]
+        important_changes = [fc for fc in field_changes if fc.impact_level == ChangeImpact.IMPORTANT]
+        
+        if critical_changes:
+            summary = f"Critical: {', '.join([fc.field_name for fc in critical_changes])}"
+        elif important_changes:
+            summary = f"Important: {', '.join([fc.field_name for fc in important_changes])}"
+        else:
+            summary = f"Modified: {len(field_changes)} field(s)"
+        
+        # Enhanced review requirement
+        requires_review = any(fc.requires_review for fc in field_changes)
+        
+        # Determine change category and risk level
+        change_category = "critical_modification" if critical_changes else "standard_modification"
+        risk_level = "high" if critical_changes else "medium" if important_changes else "low"
+        
+        return ComponentChange(
+            reference=reference,
+            change_type=overall_change_type,
+            impact_level=overall_impact,
+            field_changes=field_changes,
+            original_component=old_comp,
+            modified_component=new_comp,
+            summary=summary,
+            requires_engineering_review=requires_review,
+            change_category=change_category,
+            risk_level=risk_level
+        )
+
+app = FastAPI()
+
+# Allow CORS for local frontend development (adjust origins as needed)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For production, specify your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+def read_root():
+    return {"message": "Hello from FastAPI backend!"}
+
+def enhanced_parse_bom_xml(xml_content: str) -> Dict[str, Dict[str, str]]:
+    """Enhanced XML parsing with better error handling and validation"""
+    logger.info("Starting enhanced XML parsing...")
+    components = {}
+    parsing_warnings = []
+    
+    try:
+        tree = ET.ElementTree(ET.fromstring(xml_content))
+        root = tree.getroot()
+        logger.info(f"XML root tag: {root.tag}")
+        
+        # Log XML structure for debugging
+        try:
+            logger.debug("XML structure overview:")
+            for child in root:
+                logger.debug(f"L1: {child.tag}")
+                for subchild in child:
+                    logger.debug(f"  L2: {subchild.tag}")
+                    if len(list(subchild)) > 0:
+                        logger.debug(f"    L3 examples: {[sc.tag for sc in list(subchild)[:3]]}")
+        except Exception as e:
+            logger.warning(f"Error while logging XML structure: {str(e)}")
+        
+        # Enhanced Format 1: <DETAILS><RECORD> structure with better validation
+        details = root.find(".//DETAILS")
+        if details is not None:
+            logger.info(f"Found DETAILS element with {len(list(details))} children")
+            records = details.findall("RECORD")
+            logger.info(f"Found {len(records)} RECORD elements")
+            
+            invalid_records = 0
+            for record in records:
+                ref = record.findtext("REFDES", "").strip()
+                if not ref:
+                    invalid_records += 1
+                    continue
+                    
+                # Enhanced data extraction with validation
+                part_num = record.findtext("PART-NUM", "").strip()
+                part_name = record.findtext("PART-NAME", "").strip()
+                qty = record.findtext("QTY", "").strip()
+                
+                # Validate critical fields
+                if not part_num and not part_name:
+                    parsing_warnings.append(f"Component {ref} has no part number or part name")
+                
+                if not qty:
+                    parsing_warnings.append(f"Component {ref} has no quantity specified")
+                
+                components[ref] = {
+                    "CORP-NUM": record.findtext("CORP-NUM", "").strip(),
+                    "DESCRIPTION": record.findtext("DESCRIPTION", "").strip(),
+                    "NUMBER": record.findtext("NUMBER", "").strip(),
+                    "OPT": record.findtext("OPT", "").strip(),
+                    "PACKAGE": record.findtext("PACKAGE", "").strip(),
+                    "PART-NAME": part_name,
+                    "PART-NUM": part_num,
+                    "QTY": qty,
+                    "REFDES": ref
+                }
+            
+            if invalid_records > 0:
+                parsing_warnings.append(f"{invalid_records} records found without reference designators")
+            
+            logger.info(f"Parsed {len(components)} valid components from RECORD elements")
+            
+            # Enhanced reference expansion with better error handling
+            if components:
+                need_expansion = any(',' in ref or '-' in ref for ref in components.keys())
+                if need_expansion:
+                    logger.info("Expanding multiple reference designators...")
+                    expanded_components = {}
+                    expansion_errors = 0
+                    for ref, comp in components.items():
+                        if ',' in ref or '-' in ref:
+                            try:
+                                expanded_refs = expand_reference_designators(ref)
+                                for expanded_ref in expanded_refs:
+                                    expanded_components[expanded_ref] = {**comp, "REFDES": expanded_ref}
+                            except Exception as e:
+                                logger.warning(f"Error expanding reference \'{ref}\': {str(e)}")
+                                expanded_components[ref] = comp
+                                expansion_errors += 1
+                        else:
+                            expanded_components[ref] = comp
+                    
+                    if expansion_errors > 0:
+                        parsing_warnings.append(f"{expansion_errors} reference designators could not be expanded")
+                    
+                    logger.info(f"After expansion: {len(expanded_components)} individual components")
+                    components = expanded_components
+        
+            if components:
+                return components, parsing_warnings
+                
+    except ET.ParseError as e:
+        logger.error(f"XML parsing error: {str(e)}")
+        parsing_warnings.append(f"XML parsing error: {str(e)}")
+        return {}, parsing_warnings
+    except Exception as e:
+        logger.error(f"Error in enhanced XML parsing: {str(e)}")
+        traceback.print_exc()
+        parsing_warnings.append(f"Unexpected parsing error: {str(e)}")
+      # Enhanced fallback parsing methods
+    return try_fallback_parsing(root, parsing_warnings)
+
+class BOMValidationEngine:
+    """Enhanced validation engine for BOM data quality"""
+    
+    @staticmethod
+    def validate_bom_data(components: Dict[str, Dict[str, str]], filename: str) -> ValidationResult:
+        """Comprehensive BOM data validation"""
+        warnings = []
+        errors = []
+        suggestions = []
+        
+        if not components:
+            errors.append(f"No components found in {filename}")
+            return ValidationResult(False, warnings, errors, suggestions)
+        
+        # Check for data quality issues
+        empty_part_numbers = 0
+        empty_quantities = 0
+        invalid_quantities = 0
+        duplicate_refs = set()
+        
+        seen_refs = set()
+        for ref, comp in components.items():
+            # Check for duplicate references
+            if ref in seen_refs:
+                duplicate_refs.add(ref)
+            seen_refs.add(ref)
+            
+            # Check part number quality
+            part_num = comp.get("PART-NUM", "").strip()
+            part_name = comp.get("PART-NAME", "").strip()
+            if not part_num and not part_name:
+                empty_part_numbers += 1
+            
+            # Check quantity validity
+            qty = comp.get("QTY", "").strip()
+            if not qty:
+                empty_quantities += 1
+            else:
+                try:
+                    qty_val = float(qty)
+                    if qty_val < 0:
+                        invalid_quantities += 1
+                except ValueError:
+                    invalid_quantities += 1
+        
+        # Generate validation results
+        total_components = len(components)
+        
+        if empty_part_numbers > total_components * 0.1:
+            warnings.append(f"{empty_part_numbers}/{total_components} components lack part numbers")
+            
+        if empty_quantities > 0:
+            warnings.append(f"{empty_quantities}/{total_components} components lack quantity information")
+            
+        if invalid_quantities > 0:
+            warnings.append(f"{invalid_quantities} components have invalid quantities")
+            
+        if duplicate_refs:
+            errors.append(f"Duplicate reference designators found: {', '.join(list(duplicate_refs)[:5])}")
+        
+        # Generate suggestions
+        if empty_part_numbers > 0:
+            suggestions.append("Consider adding part numbers for better tracking")
+            
+        if total_components < 10:
+            suggestions.append("Small BOM detected - verify all components are included")
+        
+        is_valid = len(errors) == 0
+        return ValidationResult(is_valid, warnings, errors, suggestions)    @staticmethod
+    def _expand_reference_designators(ref_string: str) -> List[str]:
+        """Expand reference designator strings like 'R1-R5' or 'C10,C11,C12' into individual references"""
+        expanded_refs = []
+        
+        # Process comma-separated references
+        for part in ref_string.split(','):
+            part = part.strip()
+            if '-' in part:
+                # Handle ranges like R1-R5 or L40-41
+                try:
+                    range_parts = part.split('-')
+                    if len(range_parts) == 2:
+                        base, end = range_parts
+                        
+                        # Extract prefix and number from base
+                        prefix = ''.join(c for c in base if not c.isdigit())
+                        base_num = ''.join(c for c in base if c.isdigit())
+                        
+                        # Check if end has prefix or just number
+                        if any(not c.isdigit() for c in end):
+                            # End has prefix (e.g., R1-R5)
+                            expanded_refs.extend([base, end])
+                        else:
+                            # End is just number (e.g., L40-41)
+                            try:
+                                start_num = int(base_num)
+                                end_num = int(end)
+                                expanded_refs.extend([f"{prefix}{i}" for i in range(start_num, end_num + 1)])
+                            except ValueError:
+                                # If parsing fails, add as is
+                                expanded_refs.append(part)
+                except Exception as e:
+                    logger.warning(f"Error expanding range '{part}': {str(e)}")
+                    expanded_refs.append(part)
+            else:
+                expanded_refs.append(part)
+        
+        return expanded_refs
+
+    @staticmethod
+    def _try_fallback_parsing(root, warnings: List[str]) -> Tuple[Dict[str, Dict[str, str]], List[str]]:
+        """Try alternative parsing methods when primary parsing fails"""
+        components = {}
+        
+        # Format 2: <Component> structure
+        try:
+            logger.info("Trying Component structure as fallback...")
+            for comp in root.findall(".//Component"):
+                ref = comp.findtext("Reference", "").strip()
+                if ref:
+                    components[ref] = {
+                        "CORP-NUM": comp.findtext("Manufacturer", "").strip(),
+                        "DESCRIPTION": comp.findtext("Description", "").strip(),
+                        "NUMBER": comp.findtext("NUMBER", "").strip(),
+                        "OPT": "",
+                        "PACKAGE": "",
+                        "PART-NAME": "",
+                        "PART-NUM": comp.findtext("PartNumber", "").strip(),
+                        "QTY": comp.findtext("Value", "").strip(),
+                        "REFDES": ref
+                    }
+            logger.info(f"Parsed {len(components)} components with Reference from Component elements")
+            if components:
+                return components, warnings
+        except Exception as e:
+            logger.error(f"Error in Component fallback: {str(e)}")
+            warnings.append(f"Component fallback parsing failed: {str(e)}")
+        
+        # Format 3: Generic element search
+        try:
+            logger.info("Trying generic XML element search as final fallback...")
+            possible_component_tags = ["part", "component", "item", "element", "row", "component_info", "PART", "COMPONENT"]
+            possible_ref_tags = ["Reference", "Ref", "RefDes", "REFDES", "Designator", "RefDesignator", "id", "name"]
+            
+            for tag in possible_component_tags:
+                components_found = 0
+                for comp in root.findall(f".//{tag}"):
+                    ref = None
+                    
+                    # Try to find reference designator
+                    for ref_tag in possible_ref_tags:
+                        if comp.findtext(ref_tag):
+                            ref = comp.findtext(ref_tag).strip()
+                            break
+                    
+                    if not ref:
+                        for ref_tag in possible_ref_tags:
+                            if ref_tag.lower() in [k.lower() for k in comp.attrib.keys()]:
+                                for k, v in comp.attrib.items():
+                                    if k.lower() == ref_tag.lower():
+                                        ref = v.strip()
+                                        break
+                                if ref:
+                                    break
+                    
+                    if ref:
+                        comp_data = {
+                            "CORP-NUM": "",
+                            "DESCRIPTION": "",
+                            "NUMBER": "",
+                            "OPT": "",
+                            "PACKAGE": "",
+                            "PART-NAME": "",
+                            "PART-NUM": "",
+                            "QTY": "1",
+                            "REFDES": ref
+                        }
+                        
+                        # Extract from attributes
+                        for key, value in comp.attrib.items():
+                            key_lower = key.lower()
+                            if key_lower in ["partnumber", "part", "part-num", "pn", "part-number", "part_num"]:
+                                comp_data["PART-NUM"] = value.strip()
+                            elif key_lower in ["description", "desc", "descr"]:
+                                comp_data["DESCRIPTION"] = value.strip()
+                            elif key_lower in ["quantity", "qty", "count"]:
+                                comp_data["QTY"] = value.strip()
+                            elif key_lower in ["package", "footprint", "pkgtype"]:
+                                comp_data["PACKAGE"] = value.strip()
+                            elif key_lower in ["corp-num", "corp_num", "corpnum", "manufacturer"]:
+                                comp_data["CORP-NUM"] = value.strip()
+                        
+                        # Extract from child elements
+                        for child in comp:
+                            tag_name = child.tag.lower()
+                            if tag_name in ["partnumber", "part", "part-num", "pn", "part-number", "part_num"]:
+                                comp_data["PART-NUM"] = child.text.strip() if child.text else ""
+                            elif tag_name in ["description", "desc", "descr"]:
+                                comp_data["DESCRIPTION"] = child.text.strip() if child.text else ""
+                            elif tag_name in ["quantity", "qty", "count"]:
+                                comp_data["QTY"] = child.text.strip() if child.text else ""
+                            elif tag_name in ["package", "footprint", "pkgtype"]:
+                                comp_data["PACKAGE"] = child.text.strip() if child.text else ""
+                            elif tag_name in ["corp-num", "corp_num", "corpnum", "manufacturer"]:
+                                comp_data["CORP-NUM"] = child.text.strip() if child.text else ""
+                        
+                        components[ref] = comp_data
+                        components_found += 1
+            
+            if components_found > 0:
+                logger.info(f"Found {components_found} components using generic tag '{tag}'")
+                break
+        except Exception as e:
+            logger.error(f"Error in generic XML search: {str(e)}")
+            warnings.append(f"Generic parsing failed: {str(e)}")
+        
+        if not components:
+            warnings.append("All XML parsing methods failed")
+        
+        return components, warnings
+
+# Keep original parse function for backward compatibility
+def parse_bom_xml(xml_content: str) -> Dict[str, Dict[str, str]]:
+    
+    try:
+        tree = ET.ElementTree(ET.fromstring(xml_content))
+        root = tree.getroot()
+        logger.info(f"XML root tag: {root.tag}")
+        
+        # First, try to dump the XML structure for debugging
+        try:
+            logger.debug(f"XML structure overview:")
+            for child in root:
+                logger.debug(f"L1: {child.tag}")
+                for subchild in child:
+                    logger.debug(f"  L2: {subchild.tag}")
+                    if len(list(subchild)) > 0:
+                        logger.debug(f"    L3 examples: {[sc.tag for sc in list(subchild)[:3]]}")
+        except Exception as e:
+            logger.warning(f"Error while logging XML structure: {str(e)}")
+        
+        # Try multiple known formats
+        
+        # Format 1: <DETAILS><RECORD> structure
+        details = root.find(".//DETAILS")
+        if details is not None:
+            logger.info(f"Found DETAILS element with {len(list(details))} children")
+            records = details.findall("RECORD")
+            logger.info(f"Found {len(records)} RECORD elements")
+            
+            # First pass to collect all components as they are
+            for record in records:
+                ref = record.findtext("REFDES", "").strip()
+                if ref:
+                    components[ref] = {
+                        "CORP-NUM": record.findtext("CORP-NUM", "").strip(),
+                        "DESCRIPTION": record.findtext("DESCRIPTION", "").strip(),
+                        "NUMBER": record.findtext("NUMBER", "").strip(),
+                        "OPT": record.findtext("OPT", "").strip(),
+                        "PACKAGE": record.findtext("PACKAGE", "").strip(),
+                        "PART-NAME": record.findtext("PART-NAME", "").strip(),
+                        "PART-NUM": record.findtext("PART-NUM", "").strip(),
+                        "QTY": record.findtext("QTY", "").strip(),
+                        "REFDES": ref
+                    }
+            logger.info(f"Parsed {len(components)} components with REFDES from RECORD elements")
+            
+            # Second pass to expand multiple references (only if first pass had components)
+            if components:
+                # Check if we need to expand multiple references
+                need_expansion = any(',' in ref or '-' in ref for ref in components.keys())
+                if need_expansion:
+                    logger.info("Found components with multiple reference designators, expanding...")
+                    expanded_components = {}
+                    for ref, comp in components.items():
+                        if ',' in ref or '-' in ref:
+                            # Multiple references in one component
+                            expanded_refs = []
+                            
+                            # Process comma-separated references
+                            for part in ref.split(','):
+                                part = part.strip()
+                                if '-' in part:
+                                    # Handle ranges like R1-R5 or L40-41
+                                    try:
+                                        range_parts = part.split('-')
+                                        if len(range_parts) == 2:
+                                            base, end = range_parts
+                                            
+                                            # Extract prefix and number from base
+                                            prefix = ''.join(c for c in base if not c.isdigit())
+                                            base_num = ''.join(c for c in base if c.isdigit())
+                                            
+                                            # Check if end has prefix or just number
+                                            if any(not c.isdigit() for c in end):
+                                                # End has prefix (e.g., R1-R5)
+                                                expanded_refs.extend([base, end])
+                                            else:
+                                                # End is just number (e.g., L40-41)
+                                                try:
+                                                    start_num = int(base_num)
+                                                    end_num = int(end)
+                                                    expanded_refs.extend([f"{prefix}{i}" for i in range(start_num, end_num + 1)])
+                                                except ValueError:
+                                                    # If parsing fails, add as is
+                                                    expanded_refs.append(part)
+                                    except Exception as e:
+                                        logger.warning(f"Error expanding range '{part}': {str(e)}")
+                                        expanded_refs.append(part)
+                                else:
+                                    expanded_refs.append(part)
+                            
+                            # Create individual entries for each expanded reference
+                            for expanded_ref in expanded_refs:
+                                expanded_components[expanded_ref] = {
+                                    "CORP-NUM": comp["CORP-NUM"],
+                                    "DESCRIPTION": comp["DESCRIPTION"],
+                                    "NUMBER": comp["NUMBER"],
+                                    "OPT": comp["OPT"],
+                                    "PACKAGE": comp["PACKAGE"],
+                                    "PART-NAME": comp["PART-NAME"],
+                                    "PART-NUM": comp["PART-NUM"],
+                                    "QTY": comp["QTY"],
+                                    "REFDES": expanded_ref
+                                }
+                        else:
+                            # Single reference, add as is
+                            expanded_components[ref] = comp
+                    
+                    logger.info(f"After expansion: {len(expanded_components)} individual components")
+                    components = expanded_components
+        
+            if components:
+                return components
+    except Exception as e:
+        logger.error(f"Error in main XML parsing: {str(e)}")
+        traceback.print_exc()
+    
+    # Format 2: <Component> structure
+    try:
+        logger.info("Trying Component structure as fallback...")
+        for comp in root.findall(".//Component"):
+            ref = comp.findtext("Reference", "").strip()
+            if ref:
+                components[ref] = {
+                    "CORP-NUM": comp.findtext("Manufacturer", "").strip(),
+                    "DESCRIPTION": comp.findtext("Description", "").strip(),
+                    "NUMBER": comp.findtext("NUMBER", "").strip(),
+                    "OPT": "",
+                    "PACKAGE": "",
+                    "PART-NAME": "",
+                    "PART-NUM": comp.findtext("PartNumber", "").strip(),
+                    "QTY": comp.findtext("Value", "").strip(),
+                    "REFDES": ref
+                }
+        logger.info(f"Parsed {len(components)} components with Reference from Component elements")
+        if components:
+            return components
+    except Exception as e:
+        logger.error(f"Error in Component fallback: {str(e)}")
+        traceback.print_exc()    # Format 3: Try to parse parts directly from any element with needed attributes
+    try:
+        logger.info("Trying generic XML element search as final fallback...")
+        # Lookup different possible tag names and patterns (case-insensitive)
+        possible_component_tags = ["part", "component", "item", "element", "row", "component_info", "PART", "COMPONENT"]
+        possible_ref_tags = ["Reference", "Ref", "RefDes", "REFDES", "Designator", "RefDesignator", "id", "name"]
+        
+        for tag in possible_component_tags:
+            components_found = 0
+            for comp in root.findall(f".//{tag}"):
+                # Try different ways to get reference designator
+                ref = None
+                # Method 1: Check for child elements with reference info
+                for ref_tag in possible_ref_tags:
+                    if comp.findtext(ref_tag):
+                        ref = comp.findtext(ref_tag).strip()
+                        break
+                
+                # Method 2: Check for attributes
+                if not ref:
+                    for ref_tag in possible_ref_tags:
+                        if ref_tag.lower() in [k.lower() for k in comp.attrib.keys()]:
+                            for k, v in comp.attrib.items():
+                                if k.lower() == ref_tag.lower():
+                                    ref = v.strip()
+                                    break
+                            if ref:
+                                break
+                
+                if ref:
+                    # Found a reference, now extract other properties
+                    comp_data = {
+                        "CORP-NUM": "",
+                        "DESCRIPTION": "",
+                        "NUMBER": "",
+                        "OPT": "",
+                        "PACKAGE": "",
+                        "PART-NAME": "",
+                        "PART-NUM": "",
+                        "QTY": "1",  # Default quantity
+                        "REFDES": ref
+                    }
+                    
+                    # Extract all attributes and child elements
+                    for key, value in comp.attrib.items():
+                        key_lower = key.lower()
+                        if key_lower in ["partnumber", "part", "part-num", "pn", "part-number", "part_num"]:
+                            comp_data["PART-NUM"] = value.strip()
+                        elif key_lower in ["description", "desc", "descr"]:
+                            comp_data["DESCRIPTION"] = value.strip()
+                        elif key_lower in ["quantity", "qty", "count"]:
+                            comp_data["QTY"] = value.strip()
+                        elif key_lower in ["package", "footprint", "pkgtype"]:
+                            comp_data["PACKAGE"] = value.strip()
+                        elif key_lower in ["corp-num", "corp_num", "corpnum", "manufacturer"]:
+                            comp_data["CORP-NUM"] = value.strip()
+                    
+                    # Also check for child elements
+                    for child in comp:
+                        tag_name = child.tag.lower()
+                        if tag_name in ["partnumber", "part", "part-num", "pn", "part-number", "part_num"]:
+                            comp_data["PART-NUM"] = child.text.strip() if child.text else ""
+                        elif tag_name in ["description", "desc", "descr"]:
+                            comp_data["DESCRIPTION"] = child.text.strip() if child.text else ""
+                        elif tag_name in ["quantity", "qty", "count"]:
+                            comp_data["QTY"] = child.text.strip() if child.text else ""
+                        elif tag_name in ["package", "footprint", "pkgtype"]:
+                            comp_data["PACKAGE"] = child.text.strip() if child.text else ""
+                        elif tag_name in ["corp-num", "corp_num", "corpnum", "manufacturer"]:
+                            comp_data["CORP-NUM"] = child.text.strip() if child.text else ""
+                    
+                    components[ref] = comp_data
+                    components_found += 1
+            
+            if components_found > 0:
+                logger.info(f"Found {components_found} components using generic tag '{tag}'")
+                break
+        
+        if components:
+            return components
+    except Exception as e:
+        logger.error(f"Error in generic XML search: {str(e)}")
+        traceback.print_exc()
+    
+    logger.warning("All XML parsing methods failed. Returning empty component list.")
+    return components
+
+def format_part(part):
+    """Format parsed part data for consistent API response with corrected field mapping"""
+      # Extract part numbers - PART-NUM is internal company number, PART-NAME is actual manufacturer part
+    part_num = (
+        part.get("PART-NUM", "") or 
+        part.get("PartNumber", "") or 
+        part.get("Part Number", "") or 
+        part.get("partNumber", "") or
+        part.get("Part_Number", "") or
+        part.get("PN", "") or
+        part.get("MPN", "") or
+        part.get("ManufacturerPartNumber", "") or
+        part.get("Mfg_Part_Number", "")
+    ).strip()
+    
+    # PART-NAME contains the actual manufacturer part number
+    part_name = (
+        part.get("PART-NAME", "") or 
+        part.get("PartName", "") or 
+        part.get("partName", "") or
+        part.get("ComponentName", "") or
+        part.get("Name", "")
+    ).strip()
+      # No longer extracting manufacturer - using PART-NAME directly
+    
+    # Check if component is active (OPT != "NA")
+    opt_value = part.get("OPT", "") or part.get("Optional", "")
+    is_active = opt_value.strip().upper() != "NA"
+    
+    # FIXED: Use consistent lowercase field names to match frontend expectations
+    formatted = {
+        "reference": (
+            part.get("REFDES", "") or 
+            part.get("Reference", "") or 
+            part.get("RefDes", "") or 
+            part.get("reference", "") or
+            part.get("Ref", "") or
+            part.get("Designator", "") or
+            part.get("ComponentRef", "")
+        ).strip(),
+        "partNumber": part_num,
+        "quantity": (
+            part.get("QTY", "") or 
+            part.get("Quantity", "") or 
+            part.get("quantity", "") or 
+            part.get("Value", "") or 
+            part.get("value", "") or
+            part.get("Qty", "") or
+            part.get("Count", "") or
+            part.get("Amount", "")
+        ).strip(),
+        "optional": opt_value.strip(),
+        "description": (
+            part.get("DESCRIPTION", "") or 
+            part.get("Description", "") or 
+            part.get("description", "") or
+            part.get("Desc", "") or
+            part.get("Comment", "") or
+            part.get("Notes", "") or
+            part.get("Name", "")
+        ).strip(),
+        "footprint": (
+            part.get("PACKAGE", "") or 
+            part.get("Package", "") or 
+            part.get("Footprint", "") or 
+            part.get("footprint", "") or
+            part.get("Housing", "") or
+            part.get("Case", "") or
+            part.get("PackageType", "") or
+            part.get("Enclosure", "")
+        ).strip(),        "partName": part_name,
+        "number": (
+            part.get("NUMBER", "") or 
+            part.get("Number", "") or 
+            part.get("number", "") or
+            part.get("ItemNumber", "")
+        ).strip(),
+        "manufacturer": part_name,  # Use PART-NAME instead of manufacturer
+        "corpNum": (  # CORP-NUM is company internal ID, not manufacturer
+            part.get("CORP-NUM", "") or
+            part.get("CORP_NUM", "") or
+            part.get("corpNum", "")
+        ).strip(),
+        "isActive": is_active,  # New field to indicate if component is used
+        "status": "active" if is_active else "not_used"  # Human readable status
+    }
+    
+    # Add debug logging for the first component
+    if part.get("REFDES", "").startswith("R1") or part.get("Reference", "").startswith("R1"):
+        logger.debug(f"Original part data: {part}")
+        logger.debug(f"Formatted part data: {formatted}")
+        
+    return formatted
+
+@app.post("/compare-bom")
+async def compare_bom_enhanced(old_file: UploadFile = File(...), new_file: UploadFile = File(...)) -> Any:
+    """Enhanced BOM comparison with intelligent change analysis"""
+    try:
+        logger.info(f"Received enhanced comparison request for {old_file.filename} and {new_file.filename}")
+        old_xml = (await old_file.read()).decode('utf-8', errors='replace')
+        new_xml = (await new_file.read()).decode('utf-8', errors='replace')
+        
+        logger.info(f"Old file: {old_file.filename}, size: {len(old_xml)} chars")
+        logger.info(f"New file: {new_file.filename}, size: {len(new_xml)} chars")
+        
+        # Enhanced parsing with validation
+        old_components, old_warnings = enhanced_parse_bom_xml(old_xml)
+        new_components, new_warnings = enhanced_parse_bom_xml(new_xml)
+        
+        logger.info(f"Old components parsed: {len(old_components)}")
+        logger.info(f"New components parsed: {len(new_components)}")
+        
+        # Validate parsed data
+        validator = BOMValidationEngine()
+        old_validation = validator.validate_bom_data(old_components, old_file.filename)
+        new_validation = validator.validate_bom_data(new_components, new_file.filename)
+        
+        # Combine validation warnings
+        all_warnings = old_warnings + new_warnings + old_validation.warnings + new_validation.warnings
+        all_errors = old_validation.errors + new_validation.errors
+        
+        if all_errors:
+            logger.error(f"Validation errors found: {all_errors}")
+        
+        # Enhanced change analysis
+        added = []
+        removed = []
+        changed_components = []
+        
+        analyzer = BOMChangeAnalyzer()
+        
+        # Process new components to find added and changed
+        for ref, new_comp in new_components.items():
+            if ref not in old_components:
+                logger.info(f"Added component: {ref}")
+                added.append(format_part(new_comp))
+            else:
+                old_comp = old_components[ref]
+                
+                # Format components for comparison
+                old_formatted = format_part(old_comp)
+                new_formatted = format_part(new_comp)
+                
+                # Use enhanced analyzer to detect changes
+                component_change = analyzer.analyze_component_changes(ref, old_formatted, new_formatted)
+                
+                if component_change.field_changes:  # Only if there are actual changes
+                    logger.info(f"Changed component: {ref} - {component_change.summary}")
+                    
+                    # Create enhanced changed component record
+                    changed_comp = {
+                        "reference": ref,
+                        "original": old_formatted,
+                        "modified": new_formatted,
+                        "changeAnalysis": component_change.to_dict(),
+                        "impactLevel": component_change.impact_level.value,
+                        "requiresReview": component_change.requires_engineering_review,
+                        "summary": component_change.summary,
+                        "riskLevel": component_change.risk_level
+                    }
+                    
+                    changed_components.append(changed_comp)
+        
+        # Process old components to find removed
+        for ref, old_comp in old_components.items():
+            if ref not in new_components:
+                logger.info(f"Removed component: {ref}")
+                removed.append(format_part(old_comp))
+        
+        # Enhanced statistics and impact assessment
+        total_changes = len(added) + len(removed) + len(changed_components)
+        critical_changes = len([c for c in changed_components if c["impactLevel"] == "critical"])
+        important_changes = len([c for c in changed_components if c["impactLevel"] == "important"])
+        requires_review = len([c for c in changed_components if c["requiresReview"]])
+        
+        logger.info(f"Enhanced comparison results: Added={len(added)}, Removed={len(removed)}, Changed={len(changed_components)}")
+        logger.info(f"Impact analysis: Critical={critical_changes}, Important={important_changes}, Requires Review={requires_review}")
+        
+        # Generate executive summary
+        executive_summary = {
+            "totalComponents": {
+                "old": len(old_components),
+                "new": len(new_components)
+            },
+            "changes": {
+                "total": total_changes,
+                "added": len(added),
+                "removed": len(removed),
+                "modified": len(changed_components)
+            },
+            "impact": {
+                "critical": critical_changes,
+                "important": important_changes,
+                "minor": len(changed_components) - critical_changes - important_changes,
+                "requiresEngineering": requires_review
+            },
+            "timestamp": datetime.now().isoformat(),
+            "files": {
+                "old": old_file.filename,
+                "new": new_file.filename
+            }
+        }
+        
+        # Enhanced result structure
+        result = {
+            "addedComponents": added,
+            "deletedComponents": removed,
+            "changedComponents": changed_components,
+            "validationWarnings": all_warnings,
+            "validationErrors": all_errors,
+            "executiveSummary": executive_summary,
+            "statistics": {
+                "old_components_count": len(old_components),
+                "new_components_count": len(new_components),
+                "added_count": len(added),
+                "removed_count": len(removed),
+                "changed_count": len(changed_components),
+                "total_changes": total_changes,
+                "critical_changes": critical_changes,
+                "important_changes": important_changes,
+                "requires_review": requires_review
+            },
+            "metadata": {
+                "analysis_version": "2.0",
+                "analysis_timestamp": datetime.now().isoformat(),
+                "parsing_warnings": len(old_warnings + new_warnings),
+                "validation_status": "passed" if not all_errors else "failed"
+            }
+        }
+        
+        logger.info(f"Returning enhanced result with comprehensive analysis")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error in enhanced compare_bom: {str(e)}")
+        traceback.print_exc()
+        return JSONResponse(status_code=400, content={"detail": str(e)})
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

@@ -8,13 +8,14 @@ import FileTable from "@/components/FileTable";
 interface FileComparisonProps {
   comparisonFiles: ComparisonFiles;
   onCompare: () => void;
+  showTabs?: boolean; // Add optional prop to control tab visibility
 }
 
 interface BOMRow {
   [key: string]: string;
 }
 
-const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => {
+const FileComparison = ({ comparisonFiles, onCompare, showTabs = true }: FileComparisonProps) => {
   const [activeTab, setActiveTab] = useState("all");
   const [visibleLines, setVisibleLines] = useState<string[]>([]);
   const [addedTable, setAddedTable] = useState<BOMRow[]>([]);
@@ -230,49 +231,50 @@ const FileComparison = ({ comparisonFiles, onCompare }: FileComparisonProps) => 
               className="text-xs"
             >
               <RefreshCw className="mr-1 h-3 w-3" /> Refresh
-            </Button>
-          </div>
+            </Button>          </div>
 
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-4 w-full">
-              <TabsTrigger value="all">All Changes</TabsTrigger>
-              <TabsTrigger value="added">Added</TabsTrigger>
-              <TabsTrigger value="deleted">Deleted</TabsTrigger>
-              <TabsTrigger value="changed">Changed</TabsTrigger>
-            </TabsList>
-            <TabsContent value="all" className="mt-4">
-              {addedTable.length > 0 && <><div className="font-bold mb-1">Added</div><FileTable data={addedTable} /></>}
-              {deletedTable.length > 0 && <><div className="font-bold mb-1">Deleted</div><FileTable data={deletedTable} /></>}
-              {changedTable.length > 0 && <><div className="font-bold mb-1">Changed</div><FileTable data={changedTable} /></>}
-              {addedTable.length === 0 && deletedTable.length === 0 && changedTable.length === 0 && (
-                <div className="p-8 text-center border rounded-md bg-muted/20">
-                  <h3 className="text-lg font-medium mb-2">No Differences Found</h3>
-                  <p className="text-muted-foreground">
-                    The two files appear to be identical. Either there are no differences, or the XML files have a format that couldn't be fully parsed.
-                  </p>
-                  {file1.name.toLowerCase().endsWith('.xml') && file2.name.toLowerCase().endsWith('.xml') && (
-                    <div className="mt-4 text-left text-sm p-4 bg-amber-50 border border-amber-200 rounded">
-                      <p className="font-medium text-amber-700 mb-1">Troubleshooting Tips:</p>
-                      <ol className="list-decimal pl-4 text-amber-700 space-y-1">
-                        <li>Check that both XML files contain valid BOM data</li>
-                        <li>Ensure the XML files use consistent element names for components</li>
-                        <li>Reference designators should be present in the XML (e.g. "R1", "C42")</li>
-                      </ol>
-                    </div>
-                  )}
-                </div>
-              )}
-            </TabsContent>
-            <TabsContent value="added" className="mt-4">
-              {addedTable.length > 0 ? <FileTable data={addedTable} /> : <div className="p-4 text-center text-muted-foreground">No added components</div>}
-            </TabsContent>
-            <TabsContent value="deleted" className="mt-4">
-              {deletedTable.length > 0 ? <FileTable data={deletedTable} /> : <div className="p-4 text-center text-muted-foreground">No deleted components</div>}
-            </TabsContent>
-            <TabsContent value="changed" className="mt-4">
-              {changedTable.length > 0 ? <FileTable data={changedTable} /> : <div className="p-4 text-center text-muted-foreground">No changed components</div>}
-            </TabsContent>
-          </Tabs>
+          {showTabs && (
+            <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid grid-cols-4 w-full">
+                <TabsTrigger value="all">All Changes</TabsTrigger>
+                <TabsTrigger value="added">Added</TabsTrigger>
+                <TabsTrigger value="deleted">Deleted</TabsTrigger>
+                <TabsTrigger value="changed">Changed</TabsTrigger>
+              </TabsList>
+              <TabsContent value="all" className="mt-4">
+                {addedTable.length > 0 && <><div className="font-bold mb-1">Added</div><FileTable data={addedTable} /></>}
+                {deletedTable.length > 0 && <><div className="font-bold mb-1">Deleted</div><FileTable data={deletedTable} /></>}
+                {changedTable.length > 0 && <><div className="font-bold mb-1">Changed</div><FileTable data={changedTable} /></>}
+                {addedTable.length === 0 && deletedTable.length === 0 && changedTable.length === 0 && (
+                  <div className="p-8 text-center border rounded-md bg-muted/20">
+                    <h3 className="text-lg font-medium mb-2">No Differences Found</h3>
+                    <p className="text-muted-foreground">
+                      The two files appear to be identical. Either there are no differences, or the XML files have a format that couldn't be fully parsed.
+                    </p>
+                    {file1.name.toLowerCase().endsWith('.xml') && file2.name.toLowerCase().endsWith('.xml') && (
+                      <div className="mt-4 text-left text-sm p-4 bg-amber-50 border border-amber-200 rounded">
+                        <p className="font-medium text-amber-700 mb-1">Troubleshooting Tips:</p>
+                        <ol className="list-decimal pl-4 text-amber-700 space-y-1">
+                          <li>Check that both XML files contain valid BOM data</li>
+                          <li>Ensure the XML files use consistent element names for components</li>
+                          <li>Reference designators should be present in the XML (e.g. "R1", "C42")</li>
+                        </ol>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="added" className="mt-4">
+                {addedTable.length > 0 ? <FileTable data={addedTable} /> : <div className="p-4 text-center text-muted-foreground">No added components</div>}
+              </TabsContent>
+              <TabsContent value="deleted" className="mt-4">
+                {deletedTable.length > 0 ? <FileTable data={deletedTable} /> : <div className="p-4 text-center text-muted-foreground">No deleted components</div>}
+              </TabsContent>
+              <TabsContent value="changed" className="mt-4">
+                {changedTable.length > 0 ? <FileTable data={changedTable} /> : <div className="p-4 text-center text-muted-foreground">No changed components</div>}
+              </TabsContent>
+            </Tabs>
+          )}
         </div>
       )}
     </div>

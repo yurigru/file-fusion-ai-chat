@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from "react";
-import { Search, File, X, FileJson, FileText, Check } from "lucide-react";
+import { Search, File, X, FileJson, FileText, Check, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { UploadedFile } from "@/types";
 
 interface FileListProps {
@@ -10,9 +11,11 @@ interface FileListProps {
   selectedFiles: UploadedFile[];
   onSelectFile: (file: UploadedFile) => void;
   onRemoveFile: (fileId: string) => void;
+  onPreviewFile?: (file: UploadedFile) => void;
+  previewedFile?: UploadedFile | null;
 }
 
-const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile }: FileListProps) => {
+const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile, onPreviewFile, previewedFile }: FileListProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredFiles, setFilteredFiles] = useState<UploadedFile[]>(files);
 
@@ -33,6 +36,21 @@ const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile }: FileList
     return <FileText className="h-5 w-5 text-blue-500" />;
   };
 
+  const getFileExtension = (filename: string) => {
+    return filename.split('.').pop()?.toLowerCase() || '';
+  };
+
+  const getFileTypeColor = (filename: string) => {
+    const ext = getFileExtension(filename);
+    switch (ext) {
+      case 'xml': return 'bg-blue-100 text-blue-800';
+      case 'csv': return 'bg-green-100 text-green-800';
+      case 'net': return 'bg-purple-100 text-purple-800';
+      case 'xlsx': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -40,9 +58,23 @@ const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile }: FileList
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
-
   const isSelected = (file: UploadedFile): boolean => {
     return selectedFiles.some((selected) => selected.id === file.id);
+  };
+
+  const isPreviewed = (file: UploadedFile): boolean => {
+    return previewedFile?.id === file.id;
+  };
+
+  const handleRowClick = (file: UploadedFile) => {
+    if (onPreviewFile) {
+      onPreviewFile(file);
+    }
+  };
+
+  const handleSelectClick = (e: React.MouseEvent, file: UploadedFile) => {
+    e.stopPropagation(); // Prevent row click when clicking select button
+    onSelectFile(file);
   };
 
   return (
@@ -65,35 +97,62 @@ const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile }: FileList
             <X className="h-4 w-4" />
           </Button>
         )}
-      </div>
-
-      <div className="text-sm text-muted-foreground">
+      </div>      <div className="text-sm text-muted-foreground">
         {filteredFiles.length} file{filteredFiles.length !== 1 ? "s" : ""} found
+        {selectedFiles.length > 0 && (
+          <span className="ml-2 font-medium text-blue-600">
+            • {selectedFiles.length} selected for comparison
+          </span>
+        )}
       </div>
 
-      <div className="border rounded-md divide-y">
-        {filteredFiles.length > 0 ? (
+      <div className="text-sm text-gray-500 mb-3">
+        💡 Click on a file row to preview • Click the select button to choose for comparison
+      </div>
+
+      <div className="border rounded-md divide-y">        {filteredFiles.length > 0 ? (
           filteredFiles.map((file) => (
             <div
               key={file.id}
-              className={`flex items-center justify-between p-3 hover:bg-accent/50 transition-colors ${
-                isSelected(file) ? "bg-accent" : ""
-              }`}
+              className={`flex items-center justify-between p-3 transition-all cursor-pointer hover:bg-accent/50 ${
+                isPreviewed(file) ? 'bg-blue-50 border-blue-200' : 'border-transparent'
+              } ${
+                isSelected(file) ? "ring-2 ring-blue-500 bg-accent" : ""
+              } border-l-4`}
+              onClick={() => handleRowClick(file)}
             >
               <div className="flex items-center space-x-3 flex-1 min-w-0">
                 {getFileIcon(file.type)}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{file.name}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-medium truncate">{file.name}</p>
+                    <Badge className={getFileTypeColor(file.name)}>
+                      {getFileExtension(file.name).toUpperCase()}
+                    </Badge>
+                    {isPreviewed(file) && (
+                      <Badge variant="outline" className="text-blue-600 border-blue-300">
+                        <Eye className="w-3 h-3 mr-1" />
+                        Previewing
+                      </Badge>
+                    )}
+                    {isSelected(file) && (
+                      <Badge variant="default" className="bg-blue-600">
+                        <Check className="w-3 h-3 mr-1" />
+                        Selected
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {formatFileSize(file.size)}
+                    {formatFileSize(file.size)} • Uploaded {new Date(file.uploadedAt).toLocaleString()}
                   </p>
                 </div>
               </div>
               <div className="flex space-x-2 ml-4">
                 <Button
-                  variant={isSelected(file) ? "secondary" : "outline"}
+                  variant={isSelected(file) ? "default" : "outline"}
                   size="sm"
-                  onClick={() => onSelectFile(file)}
+                  onClick={(e) => handleSelectClick(e, file)}
+                  disabled={!isSelected(file) && selectedFiles.length >= 2}
                   className="text-xs"
                 >
                   {isSelected(file) ? (
@@ -108,7 +167,10 @@ const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile }: FileList
                   variant="outline"
                   size="icon"
                   className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                  onClick={() => onRemoveFile(file.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveFile(file.id);
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </Button>

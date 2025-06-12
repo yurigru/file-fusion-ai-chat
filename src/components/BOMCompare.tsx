@@ -1,16 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { ComparisonResult, ElectronicComponent } from "@/types"; // Import necessary types
+import { ComparisonResult } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-interface BOMComponent {
-  Reference: string;
-  Value: string;
-  Manufacturer: string;
-  PartNumber: string;
-}
+import { LayoutGrid, Table } from "lucide-react";
 
 // Update interface to accept ComparisonResult directly
 interface BOMCompareProps {
@@ -19,49 +13,25 @@ interface BOMCompareProps {
 
 const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
   const [hasData, setHasData] = useState(false);
-  const [showDebug, setShowDebug] = useState(false); // Debug only when needed
-  
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+
   useEffect(() => {
     // Check if there is any data to display
     if (comparisonResult) {
-      const hasAddedComponents = comparisonResult.addedComponents && comparisonResult.addedComponents.length > 0;
-      const hasDeletedComponents = comparisonResult.deletedComponents && comparisonResult.deletedComponents.length > 0;
-      const hasChangedComponents = comparisonResult.changedComponents && comparisonResult.changedComponents.length > 0;
+      const hasAddedComponents = (comparisonResult.addedComponents && comparisonResult.addedComponents.length > 0);
+      const hasDeletedComponents = (comparisonResult.deletedComponents && comparisonResult.deletedComponents.length > 0);
+      const hasChangedComponents = (comparisonResult.changedComponents && comparisonResult.changedComponents.length > 0);
       
       setHasData(hasAddedComponents || hasDeletedComponents || hasChangedComponents);
-      
-      console.log("BOMCompare data check:", {
-        hasAddedComponents,
-        hasDeletedComponents,
-        hasChangedComponents,
-        addedComponents: comparisonResult.addedComponents,
-        deletedComponents: comparisonResult.deletedComponents,
-        changedComponents: comparisonResult.changedComponents
-      });
-      
-      // Debug the first changed component structure
-      if (hasChangedComponents && comparisonResult.changedComponents.length > 0) {
-        const firstChanged = comparisonResult.changedComponents[0];
-        console.log("First changed component structure:", firstChanged);
-        console.log("First changed component fields:", Object.keys(firstChanged || {}));
-        if (firstChanged?.original) {
-          console.log("Original fields:", Object.keys(firstChanged.original));
-        }
-        if (firstChanged?.modified) {
-          console.log("Modified fields:", Object.keys(firstChanged.modified));
-        }
-      }
     } else {
       setHasData(false);
     }
-  }, [comparisonResult]);
-
-  // Extract BOM specific comparison data from the general ComparisonResult
+  }, [comparisonResult]);// Extract BOM specific comparison data from the general ComparisonResult
   const addedComponents = comparisonResult?.addedComponents || [];
   const deletedComponents = comparisonResult?.deletedComponents || [];
   const changedComponents = comparisonResult?.changedComponents || [];
   const validationWarnings = comparisonResult?.validationWarnings || [];
-  const statistics = comparisonResult?.statistics || {};  // Always hide manufacturer column for XML tables
+  const statistics = comparisonResult?.statistics || {};// Always hide manufacturer column for XML tables
   const hasManufacturerData = false;
 
   // Export functions
@@ -89,14 +59,13 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
         getFootprint(comp),
         getDescription(comp)
       ].map(field => `"${field}"`).join(','));
-    });
-    
-    changedComponents.forEach(chg => {
-      const original = chg.original || {}; // Backend provides lowercase keys
-      const modified = chg.modified || {}; // Backend provides lowercase keys
+    });      changedComponents.forEach(chg => {
+      const original = chg.original || {}; // Frontend provides lowercase keys
+      const modified = chg.modified || {}; // Frontend provides lowercase keys
+      const ref = chg.reference || '';
       csvRows.push([
         'Changed (Old)',
-        chg.reference || '', 
+        ref, 
         getPartNumber(original),
         getQuantity(original),
         getFootprint(original),
@@ -104,7 +73,7 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
       ].map(field => `"${field}"`).join(','));
       csvRows.push([
         'Changed (New)',
-        chg.reference || '',
+        ref,
         getPartNumber(modified),
         getQuantity(modified),
         getFootprint(modified),
@@ -166,14 +135,12 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
         report.push(`  ${ref}: ${partNum} (${qty})`);
       });
       report.push('');
-    }
-    
-    if (changedComponents.length > 0) {
+    }      if (changedComponents.length > 0) {
       report.push(`Changed Components (${changedComponents.length}):`);
       (changedComponents as any[]).forEach(chg => {
         const ref = chg.reference || ''; 
-        const original = chg.original || {}; // Backend provides lowercase keys
-        const modified = chg.modified || {}; // Backend provides lowercase keys
+        const original = chg.original || {}; // Frontend provides lowercase keys
+        const modified = chg.modified || {}; // Frontend provides lowercase keys
         
         const origPartNum = getPartNumber(original);
         const origQty = getQuantity(original);
@@ -195,25 +162,24 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
     a.click();
     window.URL.revokeObjectURL(url);
   };
-
   const getCompReference = (component: any): string => {
-    const val = component?.reference || component?.REFDES || component?.Reference;
+    const val = component?.REFDES || component?.reference || component?.Reference;
     return val ? String(val).trim() : '';
   }
   const getPartNumber = (component: any): string => {
-    const val = component?.partNumber || component?.PartNumber || component?.['PART-NUM'];
+    const val = component?.PartNumber || component?.partNumber || component?.['PART-NUM'];
     return val ? String(val).trim() : '';
   }
   const getQuantity = (component: any): string => {
-    const val = component?.quantity || component?.QTY || component?.value;
+    const val = component?.QTY || component?.quantity || component?.value;
     return val ? String(val).trim() : '';
   }
   const getFootprint = (component: any): string => {
-    const val = component?.footprint || component?.FOOTPRINT || component?.PACKAGE || component?.Package;
+    const val = component?.PACKAGE || component?.footprint || component?.FOOTPRINT || component?.Package;
     return val ? String(val).trim() : '';
   }
   const getDescription = (component: any): string => {
-    const val = component?.description || component?.DESC || component?.DESCRIPTION;
+    const val = component?.DESCRIPTION || component?.description || component?.DESC;
     return val ? String(val).trim() : '';
   }
 
@@ -243,135 +209,16 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
         <td className="p-2 border">{footprint}</td>
         <td className="p-2 border text-sm">{description}</td>
       </tr>
-    );
-  };
-
-  const renderChangedComponentRow = (chg: any, rowKey: string | number) => {
-    const ref = chg.reference || '';
-    const original = chg.original || {}; // Backend provides lowercase keys
-    const modified = chg.modified || {}; // Backend provides lowercase keys
-        
-    const originalPartNumber = getPartNumber(original);
-    const modifiedPartNumber = getPartNumber(modified);
-    const originalQuantity = getQuantity(original);
-    const modifiedQuantity = getQuantity(modified);
-    const originalFootprint = getFootprint(original);
-    const modifiedFootprint = getFootprint(modified);
-    const originalDescription = getDescription(original);
-    const modifiedDescription = getDescription(modified);
-
-    // Log values for debugging, especially for a known changing component like R172
-    if (ref === 'R172') {
-      console.log(`DEBUG R172 original:`, original);
-      console.log(`DEBUG R172 modified:`, modified);
-      console.log(`DEBUG R172 Values: PN: '${originalPartNumber}' -> '${modifiedPartNumber}', QTY: '${originalQuantity}' -> '${modifiedQuantity}'`);
-    }
-    console.log(`renderChangedComponentRow for ${ref}: PN '${originalPartNumber}' vs '${modifiedPartNumber}', QTY '${originalQuantity}' vs '${modifiedQuantity}'`);
-
-    const renderFieldChange = (fieldName: string, originalValue: string | undefined, modifiedValue: string | undefined) => {
-      const oldVal = originalValue || '';
-      const newVal = modifiedValue || '';
-      const condition = oldVal !== newVal && (oldVal || newVal);
-      
-      console.log(`renderFieldChange for ${ref} - ${fieldName}: old='${oldVal}', new='${newVal}', condition=${condition}`);
-        
-      if (condition) {
-        // Use the same arrow format for all changed fields - consistent UI
-        return (
-          <span title={`Old: ${oldVal}\\nNew: ${newVal}`}>
-            <span className="text-red-500 line-through">{oldVal || '-'}</span>
-            <span className="text-blue-500 mx-1">→</span>
-            <span className="text-green-600 font-bold">{newVal || '-'}</span>
-          </span>
-        );
-      }
-        
-      // If no change, show the current value normally
-      return (
-        <span className="text-gray-700 font-medium">
-          {oldVal || newVal || '-'}
-        </span>
-      );
-    };    const hasAnyChange = 
-      originalPartNumber !== modifiedPartNumber ||
-      originalQuantity !== modifiedQuantity ||
-      originalFootprint !== modifiedFootprint ||
-      originalDescription !== modifiedDescription;
-
-    return (
-      <tr key={rowKey} className={`hover:bg-gray-50 ${hasAnyChange ? 'border-l-4 border-l-blue-500 bg-blue-50' : 'bg-gray-50'}`}>
-        <td className="p-3 border font-bold text-gray-900 bg-blue-100">
-          {ref}
-        </td>
-        <td className="p-3 border">
-          {renderFieldChange("PartNumber", originalPartNumber, modifiedPartNumber)}
-        </td>
-        <td className="p-3 border text-center">
-          {renderFieldChange("Quantity", originalQuantity, modifiedQuantity)}
-        </td>
-        <td className="p-3 border">
-          {renderFieldChange("Footprint", originalFootprint, modifiedFootprint)}
-        </td>
-        <td className="p-3 border text-sm">
-          {renderFieldChange("Description", originalDescription, modifiedDescription)}
-        </td>
-      </tr>
-    );
-  };
+    );  };
 
   return (
     <div className="space-y-6">
-      {/* Debug Panel - Temporary */}
-      {showDebug && (
-        <Card className="bg-gray-50">
-          <CardHeader>
-            <CardTitle>Debug Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 text-sm font-mono">
-              <div>
-                <strong>hasData:</strong> {hasData.toString()}
-              </div>
-              <div>
-                <strong>addedComponents.length:</strong> {addedComponents.length}
-              </div>
-              <div>
-                <strong>deletedComponents.length:</strong> {deletedComponents.length}
-              </div>
-              <div>
-                <strong>changedComponents.length:</strong> {changedComponents.length}
-              </div>
-              {changedComponents.length > 0 && (
-                <div>
-                  <strong>First changed component:</strong>
-                  <pre className="mt-2 p-2 bg-white border rounded text-xs overflow-x-auto">
-                    {JSON.stringify(changedComponents[0], null, 2)}
-                  </pre>
-                </div>
-              )}
-              <div>
-                <strong>comparisonResult keys:</strong> {Object.keys(comparisonResult || {}).join(', ')}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
       {/* Summary Statistics */}
       <Card><CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               BOM Comparison Summary
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowDebug(!showDebug)}
-              >
-                {showDebug ? 'Hide Debug' : 'Show Debug'}
-              </Button>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={exportSummaryReport}>
+            </div><div className="flex gap-2">              <Button variant="outline" size="sm" onClick={exportSummaryReport}>
                 Export Summary
               </Button>
               <Button variant="outline" size="sm" onClick={exportToCSV}>
@@ -409,33 +256,7 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
               </ul>
             </div>
           </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Debug Information */}
-      {showDebug && (
-        <Alert>
-          <AlertDescription>
-            <div className="space-y-2">
-              <div><strong>Total Components Found:</strong> {addedComponents.length + deletedComponents.length + changedComponents.length}</div>
-              {statistics && Object.keys(statistics).length > 0 && (
-                <div>
-                  <strong>Statistics:</strong>
-                  <pre className="mt-1 text-xs">{JSON.stringify(statistics, null, 2)}</pre>
-                </div>
-              )}
-              {changedComponents.length > 0 && (
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-sm font-medium">View First Changed Component Structure</summary>
-                  <pre className="mt-2 p-3 bg-gray-100 rounded text-xs font-mono whitespace-pre-wrap overflow-x-auto">
-                    {JSON.stringify(changedComponents[0], null, 2)}
-                  </pre>
-                </details>
-              )}
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
+        </Alert>      )}
 
       {addedComponents.length > 0 && (
         <Card>
@@ -489,54 +310,188 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {changedComponents.length > 0 && (
-        <Card>          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Changed Components
-              <Badge variant="outline">{changedComponents.length}</Badge>
-              <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800 hover:bg-blue-200">New Improved Format</Badge>
-            </CardTitle>
-          </CardHeader><CardContent>            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="font-semibold text-blue-900 mb-3">How to Read Changes:</h4>
+      )}      {changedComponents.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                Changed Components
+                <Badge variant="outline">{changedComponents.length}</Badge>
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === "cards" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("cards")}
+                  className="flex items-center gap-1"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  Cards
+                </Button>
+                <Button
+                  variant={viewMode === "table" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("table")}
+                  className="flex items-center gap-1"
+                >
+                  <Table className="w-4 h-4" />
+                  Table
+                </Button>
+              </div>
+            </div>
+          </CardHeader>          <CardContent>
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-semibold text-blue-900 mb-3">How to Read Component Changes:</h4>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-6 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
-                    <span className="text-red-600">Old values</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
-                    <span className="text-green-600">New values</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                    <span className="text-blue-700">Blue border = component with changes</span>
-                  </div>
-                </div>                <div className="text-xs text-gray-600 mt-2">
-                  • All changes are displayed in a consistent format: <span className="text-red-600 line-through">old value</span> <span className="text-blue-600 font-bold">→</span> <span className="text-green-600 font-semibold">new value</span>
-                  • Fields that didn't change show their value normally
-                  • Hover over changes to highlight them further
-                  • Blue left border helps you quickly identify components with changes
+                <div className="text-xs text-gray-600">
+                  {viewMode === "cards" ? (
+                    <>
+                      • Each component is shown as a separate card for clarity
+                      • Changed fields show: <span className="text-red-600 line-through">old value</span> <span className="text-blue-600 font-bold">→</span> <span className="text-green-600 font-bold">new value</span>
+                      • Unchanged fields are shown in gray with "(unchanged)" label
+                    </>
+                  ) : (
+                    <>
+                      • Table view shows old and new values side by side
+                      • Only changed fields are highlighted
+                      • Use cards view for detailed comparison of individual components
+                    </>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse border border-gray-300">                <thead>                  <tr className="bg-blue-50">
-                    <th className="p-2 border text-left">Reference</th>
-                    <th className="p-2 border text-left">Part Name</th>
-                    <th className="p-2 border text-left">Quantity</th>
-                    <th className="p-2 border text-left">Package</th>
-                    <th className="p-2 border text-left">Description</th>
-                  </tr>
-                </thead>
-                <tbody>                  {changedComponents.map((chg: any, i: number) => {
-                    return renderChangedComponentRow(chg, chg.reference || i);
-                  })}
-                </tbody>
-              </table>
-            </div>
+            
+            {viewMode === "cards" ? (
+              <div className="space-y-4">
+                {changedComponents.map((chg: any, i: number) => {
+                  // Handle both uppercase (backend) and lowercase (frontend) format
+                  const ref = chg.Reference || chg.reference || `Component-${i}`;
+                  const original = chg.Original || chg.original || {};
+                  const modified = chg.Modified || chg.modified || {};
+                  
+                  const originalPartNumber = getPartNumber(original);
+                  const modifiedPartNumber = getPartNumber(modified);
+                  const originalQuantity = getQuantity(original);
+                  const modifiedQuantity = getQuantity(modified);
+                  const originalFootprint = getFootprint(original);
+                  const modifiedFootprint = getFootprint(modified);
+                  const originalDescription = getDescription(original);
+                  const modifiedDescription = getDescription(modified);
+                  
+                  const renderFieldComparison = (fieldName: string, oldVal: string, newVal: string) => {
+                    const hasChange = oldVal !== newVal;
+                    const hasData = oldVal || newVal;
+                    
+                    if (hasChange && hasData) {
+                      return (
+                        <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <span className="font-medium text-gray-700 min-w-[100px]">{fieldName}:</span>
+                          <span className="text-red-600 line-through bg-red-50 px-2 py-1 rounded">{oldVal || '(empty)'}</span>
+                          <span className="text-blue-600 font-bold">→</span>
+                          <span className="text-green-600 font-bold bg-green-50 px-2 py-1 rounded">{newVal || '(empty)'}</span>
+                        </div>
+                      );
+                    } else if (hasData) {
+                      return (
+                        <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                          <span className="font-medium text-gray-700 min-w-[100px]">{fieldName}:</span>
+                          <span className="text-gray-600">{newVal || oldVal || '(no data)'}</span>
+                          <span className="text-xs text-gray-400">(unchanged)</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  };
+                  
+                  const hasAnyChange = 
+                    originalPartNumber !== modifiedPartNumber ||
+                    originalQuantity !== modifiedQuantity ||
+                    originalFootprint !== modifiedFootprint ||
+                    originalDescription !== modifiedDescription;
+                  
+                  return (
+                    <Card key={ref} className={`border-l-4 ${hasAnyChange ? 'border-l-blue-500 bg-blue-50' : 'border-l-gray-300'}`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg font-bold text-blue-900 flex items-center gap-2">
+                          📍 {ref}
+                          {hasAnyChange && <Badge variant="outline" className="bg-blue-100">Changed</Badge>}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {/* Field comparisons */}
+                        {renderFieldComparison("Part Number", originalPartNumber, modifiedPartNumber)}
+                        {renderFieldComparison("Quantity", originalQuantity, modifiedQuantity)}
+                        {renderFieldComparison("Package", originalFootprint, modifiedFootprint)}
+                        {renderFieldComparison("Description", originalDescription, modifiedDescription)}
+                        
+                        {/* Summary */}
+                        <div className="mt-4 p-3 bg-blue-100 rounded">
+                          <div className="text-sm font-medium text-blue-900">
+                            {hasAnyChange ? '✅ Changes detected and displayed above' : '➡️ No changes in tracked fields'}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse border border-gray-300">
+                  <thead>
+                    <tr className="bg-blue-50">
+                      <th className="p-2 border text-left">Reference</th>
+                      <th className="p-2 border text-left">Field</th>
+                      <th className="p-2 border text-left">Old Value</th>
+                      <th className="p-2 border text-left">New Value</th>
+                      <th className="p-2 border text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {changedComponents.map((chg: any, i: number) => {
+                      // Handle both uppercase (backend) and lowercase (frontend) format
+                      const ref = chg.Reference || chg.reference || `Component-${i}`;
+                      const original = chg.Original || chg.original || {};
+                      const modified = chg.Modified || chg.modified || {};
+                      
+                      const fields = [
+                        { name: 'Part Number', oldVal: getPartNumber(original), newVal: getPartNumber(modified) },
+                        { name: 'Quantity', oldVal: getQuantity(original), newVal: getQuantity(modified) },
+                        { name: 'Package', oldVal: getFootprint(original), newVal: getFootprint(modified) },
+                        { name: 'Description', oldVal: getDescription(original), newVal: getDescription(modified) }
+                      ];
+                      
+                      return fields.map((field, fieldIndex) => {
+                        const hasChange = field.oldVal !== field.newVal;
+                        const hasData = field.oldVal || field.newVal;
+                        
+                        if (!hasData) return null;
+                        
+                        return (
+                          <tr key={`${ref}-${fieldIndex}`} className={hasChange ? "bg-yellow-50" : "bg-gray-50"}>
+                            <td className="p-2 border font-medium">{fieldIndex === 0 ? ref : ''}</td>
+                            <td className="p-2 border">{field.name}</td>
+                            <td className={`p-2 border ${hasChange ? 'text-red-600 line-through' : 'text-gray-600'}`}>
+                              {field.oldVal || '(empty)'}
+                            </td>
+                            <td className={`p-2 border ${hasChange ? 'text-green-600 font-bold' : 'text-gray-600'}`}>
+                              {field.newVal || '(empty)'}
+                            </td>
+                            <td className="p-2 border">
+                              {hasChange ? (
+                                <Badge variant="outline" className="bg-yellow-100">Changed</Badge>
+                              ) : (
+                                <span className="text-xs text-gray-400">Unchanged</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      }).filter(row => row !== null);
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

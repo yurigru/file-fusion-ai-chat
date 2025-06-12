@@ -11,7 +11,7 @@ import BOMCompare from "@/components/BOMCompare";
 
 import { UploadedFile, ComparisonFiles, ComparisonResult, ElectronicComponent, NetlistConnection } from "@/types";
 import { toast } from "@/components/ui/sonner";
-import { ArrowLeftRight, Plus, Minus, Check, RefreshCw } from "lucide-react"; // Import RefreshCw
+import { ArrowLeftRight, Plus, Minus, Check } from "lucide-react";
 import { XMLParser } from 'fast-xml-parser'; // Use fast-xml-parser instead of xml2js
 
 const Index = () => {
@@ -95,24 +95,30 @@ const Index = () => {
       setTablePreview(null);
     }
   }, [selectedFiles]);
-
   const detectFileType = (file1: UploadedFile, file2: UploadedFile) => {
     const determineType = (file: UploadedFile): "bom" | "netlist" | null => {
       const fileName = file.name.toLowerCase();
-      if (fileName.includes("bom") || fileName.endsWith(".csv") || fileName.endsWith(".xlsx")) {
+      if (fileName.includes("bom") || fileName.endsWith(".csv") || fileName.endsWith(".xlsx") || fileName.endsWith(".xml")) {
         return "bom";
       } else if (fileName.includes("net") || fileName.endsWith(".net") || fileName.endsWith(".netlist")) {
         return "netlist";
       }
       return null;
-    };
-
-    const type1 = determineType(file1);
+    };    const type1 = determineType(file1);
     const type2 = determineType(file2);
+
+    console.log("File type detection:", {
+      file1: file1.name,
+      file2: file2.name, 
+      type1,
+      type2,
+      finalFileType: type1 && type1 === type2 ? type1 : null
+    });
 
     // Only set file type if both files are of the same type
     if (type1 && type1 === type2) {
       setFileType(type1);
+      console.log("Setting fileType to:", type1);
       // Initialize the appropriate data structure
       if (type1 === "bom") {
         setComponents([]);
@@ -121,6 +127,7 @@ const Index = () => {
       }
     } else {
       setFileType(null);
+      console.log("Setting fileType to null - types don't match");
     }
   };
 
@@ -213,8 +220,7 @@ const Index = () => {
       });
       const formData = new FormData();
       formData.append("old_file", oldFile);
-      formData.append("new_file", newFile);
-      try {
+      formData.append("new_file", newFile);      try {
         // Use relative URL for proxy to work in all environments
         const response = await fetch("/compare-bom", {
           method: "POST",
@@ -225,7 +231,12 @@ const Index = () => {
           const errorData = await response.json();
           throw new Error(errorData.detail || "BOM comparison failed");
         }
-          const data = await response.json();        // Show validation warnings if any
+          const data = await response.json();
+        
+        console.log("Backend response received:", data);
+        console.log("Backend response keys:", Object.keys(data));
+        
+        // Show validation warnings if any
         if (data.validation_warnings && data.validation_warnings.length > 0) {
           data.validation_warnings.forEach((warning: string) => {
             toast.error(`Warning: ${warning}`);
@@ -236,32 +247,32 @@ const Index = () => {
         if (data.statistics) {
           toast.success(`Comparison completed: ${data.statistics.total_changes} total changes found`);
         }// Map the backend response to the frontend component data structure
-        const addedComponents = (data.addedComponents || []).map(comp => ({
-          id: comp.reference || "",
-          reference: comp.reference || "",
-          value: comp.quantity || "",
-          partNumber: comp.partNumber || "",
-          description: comp.description || "",
-          manufacturer: comp.manufacturer || "",
-          footprint: comp.footprint || "",
-          quantity: parseInt(comp.quantity || "0")
+        const addedComponents = (data.added || []).map(comp => ({
+          id: comp.REFDES || "",
+          reference: comp.REFDES || "",
+          value: comp.QTY || "",
+          partNumber: comp.PartNumber || "",
+          description: comp.DESCRIPTION || "",
+          manufacturer: comp.PARTNAME || "",
+          footprint: comp.PACKAGE || "",
+          quantity: parseInt(comp.QTY || "0")
         }));
         
-        const deletedComponents = (data.deletedComponents || []).map(comp => ({
-          id: comp.reference || "",
-          reference: comp.reference || "",
-          value: comp.quantity || "",
-          partNumber: comp.partNumber || "",
-          description: comp.description || "",
-          manufacturer: comp.manufacturer || "",
-          footprint: comp.footprint || "",
-          quantity: parseInt(comp.quantity || "0")
-        }));        const changedComponents = (data.changedComponents || []).map(chg => {
+        const deletedComponents = (data.removed || []).map(comp => ({
+          id: comp.REFDES || "",
+          reference: comp.REFDES || "",
+          value: comp.QTY || "",
+          partNumber: comp.PartNumber || "",
+          description: comp.DESCRIPTION || "",
+          manufacturer: comp.PARTNAME || "",
+          footprint: comp.PACKAGE || "",
+          quantity: parseInt(comp.QTY || "0")
+        }));        const changedComponents = (data.changed || []).map(chg => {
           // Ensure we're accessing the data with proper format checking
-          if (!chg || !chg.original || !chg.modified) {
+          if (!chg || !chg.Original || !chg.Modified) {
             return {
-              id: chg?.reference || "unknown",
-              reference: chg?.reference || "unknown",
+              id: chg?.Reference || "unknown",
+              reference: chg?.Reference || "unknown",
               original: {
                 partNumber: "",
                 quantity: 0,
@@ -282,41 +293,46 @@ const Index = () => {
               }
             };
           }            const mappedComponent = {
-            id: chg.reference,
-            reference: chg.reference,
+            id: chg.Reference,
+            reference: chg.Reference,
             original: {
-              partNumber: chg.original.partNumber || "",
-              quantity: parseInt(chg.original.quantity || "0"),
-              value: chg.original.quantity || "",
-              reference: chg.original.reference || chg.reference,
-              footprint: chg.original.footprint || "",
-              description: chg.original.description || "",
-              manufacturer: chg.original.manufacturer || "",
-            },
-            modified: {
-              partNumber: chg.modified.partNumber || "",
-              quantity: parseInt(chg.modified.quantity || "0"),              value: chg.modified.quantity || "",
-              reference: chg.modified.reference || chg.reference,
-              footprint: chg.modified.footprint || "",
-              description: chg.modified.description || "",
-              manufacturer: chg.modified.manufacturer || "",
+              partNumber: chg.Original.PartNumber || "",
+              quantity: parseInt(chg.Original.QTY || "0"),
+              value: chg.Original.QTY || "",
+              reference: chg.Original.REFDES || chg.Reference,
+              footprint: chg.Original.PACKAGE || "",
+              description: chg.Original.DESCRIPTION || "",
+              manufacturer: chg.Original.PARTNAME || "",
+            },            modified: {
+              partNumber: chg.Modified.PartNumber || "",
+              quantity: parseInt(chg.Modified.QTY || "0"),              value: chg.Modified.QTY || "",
+              reference: chg.Modified.REFDES || chg.Reference,
+              footprint: chg.Modified.PACKAGE || "",
+              description: chg.Modified.DESCRIPTION || "",
+              manufacturer: chg.Modified.PARTNAME || "",
             },
           };
           return mappedComponent;
-        });
-
-        const finalResult = {
-          // Empty arrays for legacy fields
-          added: [],
-          deleted: [],
-          changed: [],
+        });        const finalResult = {
+          // Use the component data for legacy fields to maintain compatibility
+          added: addedComponents,
+          deleted: deletedComponents,
+          changed: changedComponents,
           // Map the component data
           addedComponents,
           deletedComponents,
           changedComponents,
           // Add validation warnings and statistics
           validationWarnings: data.validation_warnings || [],
-          statistics: data.statistics || {}        };
+          statistics: data.statistics || {}
+        };
+        
+        console.log("Final result being set:", finalResult);
+        console.log("Final result data counts:", {
+          addedComponents: finalResult.addedComponents.length,
+          deletedComponents: finalResult.deletedComponents.length,
+          changedComponents: finalResult.changedComponents.length
+        });
         
         setComparisonFiles({
           ...comparisonFiles,
@@ -432,11 +448,11 @@ const Index = () => {
       }
     });
     
-    setConnections(mockConnections);
-  };  return (
+    setConnections(mockConnections);  };
+
+  return (
     <div className="container mx-auto py-8 max-w-6xl">
-      <div className="space-y-8">
-        <div>
+      <div className="space-y-8">        <div>
           <h1 className="text-3xl font-bold tracking-tight">Electronic Schematic Analyzer</h1>
           <p className="text-muted-foreground mt-2">
             Upload, analyze, and compare BOM and netlist files with AI assistance
@@ -483,7 +499,16 @@ const Index = () => {
                   </div>
                 )}
               </TabsContent>              <TabsContent value="compare" className="space-y-4">
-                <FileComparison comparisonFiles={comparisonFiles} onCompare={handleCompare} />
+                <FileComparison 
+                  comparisonFiles={comparisonFiles} 
+                  onCompare={handleCompare} 
+                  showTabs={fileType !== "bom"} 
+                />
+                {/* Debug info */}
+                <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
+                  Debug: fileType = "{fileType}", showTabs = {String(fileType !== "bom")}, 
+                  will show BOMCompare = {String(fileType === "bom")}
+                </div>
                 {fileType === "bom" && (
                   <div>
                     <BOMCompare comparisonResult={comparisonFiles.result} />
@@ -491,7 +516,8 @@ const Index = () => {
                 )}
                 {fileType === "netlist" && (
                   <SchematicComparison comparisonFiles={comparisonFiles} onCompare={handleCompare} />
-                )}              </TabsContent>
+                )}
+              </TabsContent>
             </Tabs>
           </div>
 
