@@ -17,6 +17,7 @@ import { XMLParser } from 'fast-xml-parser'; // Use fast-xml-parser instead of x
 const Index = () => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<UploadedFile[]>([]);
+  const [previewedFile, setPreviewedFile] = useState<UploadedFile | null>(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [comparisonFiles, setComparisonFiles] = useState<ComparisonFiles>({
     file1: null,

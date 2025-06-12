@@ -141,9 +141,8 @@ const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile, onPreviewF
                         Selected
                       </Badge>
                     )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatFileSize(file.size)} • Uploaded {new Date(file.uploadedAt).toLocaleString()}
+                  </div>                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(file.size)} • Uploaded {new Date(file.lastModified).toLocaleString()}
                   </p>
                 </div>
               </div>
