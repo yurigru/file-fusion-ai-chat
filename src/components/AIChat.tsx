@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import ModelSelector from "./ModelSelector";
 import { OllamaModel, ChatMessage, ComparisonResult, UploadedFile, ServerConfig, MCPTool } from "@/types";
 import { toast } from "@/components/ui/sonner";
+import { ChatService } from "@/services/chatService";
 
 interface AIChatProps {
   selectedFile: UploadedFile | null;
@@ -17,14 +18,20 @@ interface AIChatProps {
 }
 
 const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) => {
-  const [model, setModel] = useState<OllamaModel | string>("llama3");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [model, setModel] = useState<OllamaModel | string>("llama3.2");  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: `welcome-${Date.now()}`,
+      role: "assistant",
+      content: "👋 Hi! I'm your AI assistant powered by Ollama. I can help you with:\n\n• 📁 Analyzing uploaded files (BOMs, netlists, etc.)\n• 🔍 Comparing file differences\n• 💡 Explaining technical concepts\n• 🤔 Answering questions on any topic\n\nI'm available even without uploading files! You can select different AI models from the dropdown above. What would you like to know?",
+      timestamp: Date.now()
+    }
+  ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [serverConfig, setServerConfig] = useState<ServerConfig>({
     type: "ollama",
-    modelName: "llama3",
+    modelName: "llama3.2",
     ollamaUrl: "http://localhost:11434",
     mcpConfig: {
       url: "http://localhost:8080",
@@ -91,17 +98,23 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleModelChange = (newModel: OllamaModel | string) => {
+  };  const handleModelChange = (newModel: OllamaModel | string) => {
     setModel(newModel);
+    // Update serverConfig when model changes
+    const modelName = typeof newModel === 'string' ? newModel : String(newModel);
+    setServerConfig(prev => ({
+      ...prev,
+      modelName
+    }));
   };
-
   const handleServerConfigChange = (config: ServerConfig) => {
     setServerConfig(config);
+    // Also update the model state when server config changes
+    if (config.modelName && config.modelName !== model) {
+      setModel(config.modelName);
+    }
   };
-
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!input.trim()) return;
 
     const userMessage: ChatMessage = {
@@ -115,30 +128,83 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI response based on server configuration
-    // In a real implementation, this would call the appropriate API
-    setTimeout(() => {
-      let responseText = "";
-      
-      if (serverConfig.type === "ollama") {
-        responseText = `[Ollama: ${serverConfig.modelName}] This is a simulated response using the Ollama model. In a real implementation, this would connect to the Ollama API at ${serverConfig.ollamaUrl}.`;
-      } else {
-        // Get active tools
-        const activeTools = serverConfig.mcpConfig?.tools.filter(t => t.enabled) || [];
-        
-        responseText = `[MCP: ${serverConfig.mcpConfig?.serverType}] This is a simulated response using the MCP server at ${serverConfig.mcpConfig?.url}. Using ${activeTools.length} active tools: ${activeTools.map(t => t.name).join(", ")}.`;
+    try {
+      // Prepare context for AI
+      let contextualPrompt = input;
+        // Add file context if available (but AI should work without files too)
+      if (selectedFile) {
+        contextualPrompt = `I'm analyzing a file: ${selectedFile.name}. ${input}`;
+      } else if (comparedFiles?.file1 && comparedFiles?.file2) {
+        contextualPrompt = `I'm comparing two files: ${comparedFiles.file1.name} and ${comparedFiles.file2.name}. ${input}`;
+          // Add comparison results if available - with proper array checks
+        if (comparisonResult) {
+          const addedCount = Array.isArray(comparisonResult.added) ? comparisonResult.added.length : 0;
+          const removedCount = Array.isArray(comparisonResult.removed) ? comparisonResult.removed.length : 0;
+          const changedCount = Array.isArray(comparisonResult.changed) ? comparisonResult.changed.length : 0;
+          
+          const summary = `Comparison shows: ${addedCount} added components, ${removedCount} removed components, ${changedCount} changed components.`;
+          contextualPrompt = `${contextualPrompt}\n\nComparison results: ${summary}`;
+        }
       }
+      // If no files, just use the input as-is (AI assistant works standalone)      // Use real AI service
+      if (serverConfig.type === "ollama") {
+        // Create chat service instance with the correct Ollama URL
+        const ollamaBaseUrl = `${serverConfig.ollamaUrl || "http://localhost:11434"}/v1`;
+        const chatService = new ChatService(ollamaBaseUrl);
+        
+        // Ensure we have valid messages array and combine with current user message
+        const currentMessages = Array.isArray(messages) ? messages : [];
+        const allMessages = [...currentMessages, { ...userMessage, content: contextualPrompt }];
+        
+        const response = await chatService.sendMessage(allMessages, serverConfig);
+        
+        const assistantMessage: ChatMessage = {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: response?.choices?.[0]?.message?.content || "Sorry, I couldn't process your request.",
+          timestamp: Date.now()
+        };        setMessages((prev) => {
+          const prevMessages = Array.isArray(prev) ? prev : [];
+          return [...prevMessages, assistantMessage];
+        });
+        toast("Response received from AI");} else {
+        // MCP fallback (simulated for now)
+        const activeTools = Array.isArray(serverConfig.mcpConfig?.tools) ? 
+          serverConfig.mcpConfig.tools.filter(t => t.enabled) : [];
+        
+        const responseText = `[MCP: ${serverConfig.mcpConfig?.serverType}] This is a simulated response using the MCP server at ${serverConfig.mcpConfig?.url}. Using ${activeTools.length} active tools: ${activeTools.map(t => t.name).join(", ")}.
 
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
+Your query: "${input}"
+
+This would be processed by the MCP server with the available tools.`;
+
+        const assistantMessage: ChatMessage = {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: responseText,
+          timestamp: Date.now()
+        };        setMessages((prev) => {
+          const prevMessages = Array.isArray(prev) ? prev : [];
+          return [...prevMessages, assistantMessage];
+        });
+        toast("MCP response (simulated)");
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
         role: "assistant",
-        content: responseText,
+        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please make sure Ollama is running and try again.`,
         timestamp: Date.now()
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      };      setMessages((prev) => {
+        const prevMessages = Array.isArray(prev) ? prev : [];
+        return [...prevMessages, errorMessage];
+      });
+      toast(`Failed to get AI response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -146,10 +212,15 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
       e.preventDefault();
       handleSendMessage();
     }
-  };
-
-  const resetChat = () => {
-    setMessages([]);
+  };  const resetChat = () => {
+    setMessages([
+      {
+        id: `welcome-${Date.now()}`,
+        role: "assistant",
+        content: "👋 Hi! I'm your AI assistant powered by Ollama. I can help you with:\n\n• 📁 Analyzing uploaded files (BOMs, netlists, etc.)\n• 🔍 Comparing file differences\n• 💡 Explaining technical concepts\n• 🤔 Answering questions on any topic\n\nI'm available even without uploading files! You can select different AI models from the dropdown above. What would you like to know?",
+        timestamp: Date.now()
+      }
+    ]);
     toast.success("Chat history cleared");
   };
 

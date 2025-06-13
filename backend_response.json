@@ -1,0 +1,160 @@
+{
+  "added": [
+    {
+      "REFDES": "C999",
+      "PartNumber": "00005021N",
+      "QTY": "1",
+      "OPT": "R156",
+      "DESCRIPTION": "RES CHIP MF 10K 0.05W 0.1% 0402",
+      "PACKAGE": "",
+      "PARTNAME": "S0402CA1002BHB",
+      "NUMBER": "2"
+    },
+    {
+      "REFDES": "U999",
+      "PartNumber": "99609464M",
+      "QTY": "1",
+      "OPT": "NA",
+      "DESCRIPTION": "FERRITE BEAD 300E .45A 10%",
+      "PACKAGE": "",
+      "PARTNAME": "2506033017Z0",
+      "NUMBER": "153"
+    }
+  ],
+  "removed": [
+    {
+      "REFDES": "R156",
+      "PartNumber": "00005021N",
+      "QTY": "1",
+      "OPT": "",
+      "DESCRIPTION": "RES CHIP MF 10K 0.05W 0.1% 0402",
+      "PACKAGE": "",
+      "PARTNAME": "S0402CA1002BHB",
+      "NUMBER": "2"
+    },
+    {
+      "REFDES": "L40",
+      "PartNumber": "00005407N",
+      "QTY": "3",
+      "OPT": "",
+      "DESCRIPTION": "FERRITE BEAD 600E 200MA 25% 060",
+      "PACKAGE": "",
+      "PARTNAME": "BLM18BD601SN1",
+      "NUMBER": "3"
+    },
+    {
+      "REFDES": "L41",
+      "PartNumber": "00005407N",
+      "QTY": "3",
+      "OPT": "",
+      "DESCRIPTION": "FERRITE BEAD 600E 200MA 25% 060",
+      "PACKAGE": "",
+      "PARTNAME": "BLM18BD601SN1",
+      "NUMBER": "3"
+    },
+    {
+      "REFDES": "L44",
+      "PartNumber": "00005407N",
+      "QTY": "3",
+      "OPT": "",
+      "DESCRIPTION": "FERRITE BEAD 600E 200MA 25% 060",
+      "PACKAGE": "",
+      "PARTNAME": "BLM18BD601SN1",
+      "NUMBER": "3"
+    }
+  ],
+  "changed": [
+    {
+      "Reference": "R172",
+      "Original": {
+        "REFDES": "R172",
+        "PartNumber": "00087748N",
+        "QTY": "1",
+        "OPT": "",
+        "DESCRIPTION": "RES CHIP MF 1K 0.06W 1% R0402",
+        "PACKAGE": "",
+        "PARTNAME": "D101001K00FP0",
+        "NUMBER": "1"
+      },
+      "Modified": {
+        "REFDES": "R172",
+        "PartNumber": "00005407N",
+        "QTY": "1",
+        "OPT": "",
+        "DESCRIPTION": "RES CHIP MF 1K 0.06W 1% R0402",
+        "PACKAGE": "",
+        "PARTNAME": "D101001K00FP0",
+        "NUMBER": "1"
+      }
+    },
+    {
+      "Reference": "R146",
+      "Original": {
+        "REFDES": "R146",
+        "PartNumber": "34760124M",
+        "QTY": "3",
+        "OPT": "NA",
+        "DESCRIPTION": "RES CHIP MF 4.99K 0.063W 1% 040",
+        "PACKAGE": "",
+        "PARTNAME": "CRCW04024991FRT1",
+        "NUMBER": "149"
+      },
+      "Modified": {
+        "REFDES": "R146",
+        "PartNumber": "34760125M",
+        "QTY": "3",
+        "OPT": "NA",
+        "DESCRIPTION": "RES CHIP MF 4.99K 0.063W 1% 040",
+        "PACKAGE": "",
+        "PARTNAME": "CRCW04024991FRT1",
+        "NUMBER": "149"
+      }
+    },
+    {
+      "Reference": "R147",
+      "Original": {
+        "REFDES": "R147",
+        "PartNumber": "34760124M",
+        "QTY": "3",
+        "OPT": "NA",
+        "DESCRIPTION": "RES CHIP MF 4.99K 0.063W 1% 040",
+        "PACKAGE": "",
+        "PARTNAME": "CRCW04024991FRT1",
+        "NUMBER": "149"
+      },
+      "Modified": {
+        "REFDES": "R147",
+        "PartNumber": "34760125M",
+        "QTY": "3",
+        "OPT": "NA",
+        "DESCRIPTION": "RES CHIP MF 4.99K 0.063W 1% 040",
+        "PACKAGE": "",
+        "PARTNAME": "CRCW04024991FRT1",
+        "NUMBER": "149"
+      }
+    },
+    {
+      "Reference": "R148",
+      "Original": {
+        "REFDES": "R148",
+        "PartNumber": "34760124M",
+        "QTY": "3",
+        "OPT": "NA",
+        "DESCRIPTION": "RES CHIP MF 4.99K 0.063W 1% 040",
+        "PACKAGE": "",
+        "PARTNAME": "CRCW04024991FRT1",
+        "NUMBER": "149"
+      },
+      "Modified": {
+        "REFDES": "R148",
+        "PartNumber": "34760125M",
+        "QTY": "3",
+        "OPT": "NA",
+        "DESCRIPTION": "RES CHIP MF 4.99K 0.063W 1% 040",
+        "PACKAGE": "",
+        "PARTNAME": "CRCW04024991FRT1",
+        "NUMBER": "149"
+      }
+    }
+  ]
+}

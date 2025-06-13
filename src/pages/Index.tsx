@@ -517,16 +517,14 @@ const Index = () => {
     });
     
     setConnections(mockConnections);  };  return (
-    <div className="container mx-auto py-8">
+    <div className="mx-auto py-8 px-4 max-w-[1400px]">
       <div className="space-y-8"><div>
           <h1 className="text-3xl font-bold tracking-tight">Electronic Schematic Analyzer</h1>
           <p className="text-muted-foreground mt-2">
             Upload, analyze, and compare BOM and netlist files with AI assistance
           </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+        </div>        <div className="w-full">
+          <div className="w-full">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <div className="flex items-center justify-between">                <TabsList>
                   <TabsTrigger value="upload">Upload</TabsTrigger>

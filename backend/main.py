@@ -1,11 +1,15 @@
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from typing import List, Dict, Any, Optional
+from pydantic import BaseModel
 import xml.etree.ElementTree as ET
 import logging
 import sys
 import traceback
+import json
+import aiohttp
+import asyncio
 
 # Configure logging
 logging.basicConfig(
@@ -25,6 +29,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Pydantic models for AI chat
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    model: str
+    messages: List[ChatMessage]
+    stream: bool = False
+    ollama_url: str = "http://localhost:11434"
+
+class ChatResponse(BaseModel):
+    id: str
+    object: str = "chat.completion"
+    created: int
+    model: str
+    choices: List[Dict[str, Any]]
+    usage: Dict[str, int]
+
+class OllamaGenerateRequest(BaseModel):
+    model: str
+    prompt: str
+    stream: bool = False
+    options: Optional[Dict[str, Any]] = None
 
 @app.get("/")
 def read_root():
@@ -375,6 +404,208 @@ async def compare_bom(old_file: UploadFile = File(...), new_file: UploadFile = F
         logger.error(f"Error in compare_bom: {str(e)}")
         traceback.print_exc()
         return JSONResponse(status_code=400, content={"detail": str(e)})
+
+# AI Chat endpoints
+@app.post("/api/chat/completions")
+async def chat_completions(request: ChatRequest):
+    """OpenAI-compatible chat completions endpoint that proxies to Ollama"""
+    try:
+        # Convert messages to a single prompt for Ollama
+        prompt = ""
+        for message in request.messages:
+            if message.role == "system":
+                prompt += f"System: {message.content}\n"
+            elif message.role == "user":
+                prompt += f"User: {message.content}\n"
+            elif message.role == "assistant":
+                prompt += f"Assistant: {message.content}\n"
+        
+        prompt += "Assistant: "
+        
+        # Prepare Ollama request
+        ollama_request = {
+            "model": request.model,
+            "prompt": prompt,
+            "stream": request.stream,
+            "options": {
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "top_k": 40,
+            }
+        }
+          # Make request to Ollama with timeout for remote connections
+        timeout = aiohttp.ClientTimeout(total=30, connect=10)  # 30s total, 10s connect timeout
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            try:
+                async with session.post(
+                    f"{request.ollama_url}/api/generate",
+                    json=ollama_request
+                ) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        logger.error(f"Ollama error: {response.status} - {error_text}")
+                        return JSONResponse(
+                            status_code=response.status,
+                            content={"error": f"Ollama server error: {error_text}"}
+                        )
+            except aiohttp.ClientError as e:
+                logger.error(f"Connection error to Ollama at {request.ollama_url}: {str(e)}")
+                return JSONResponse(
+                    status_code=503,
+                    content={"error": f"Cannot connect to Ollama server at {request.ollama_url}. Please check the URL and ensure the server is running."}
+                )
+                
+                if request.stream:
+                    # Stream response
+                    async def generate():
+                        async for line in response.content:
+                            if line:
+                                try:
+                                    data = json.loads(line.decode('utf-8'))
+                                    if 'response' in data:
+                                        # Convert to OpenAI format
+                                        chunk = {
+                                            "id": "chatcmpl-ollama",
+                                            "object": "chat.completion.chunk",
+                                            "created": int(asyncio.get_event_loop().time()),
+                                            "model": request.model,
+                                            "choices": [{
+                                                "index": 0,
+                                                "delta": {"content": data['response']},
+                                                "finish_reason": "stop" if data.get('done', False) else None
+                                            }]
+                                        }
+                                        yield f"data: {json.dumps(chunk)}\n\n"
+                                        
+                                        if data.get('done', False):
+                                            yield "data: [DONE]\n\n"
+                                            break
+                                except json.JSONDecodeError:
+                                    continue
+                    
+                    return StreamingResponse(
+                        generate(),
+                        media_type="text/plain",
+                        headers={"Cache-Control": "no-cache"}
+                    )
+                else:
+                    # Non-streaming response
+                    data = await response.json()
+                    
+                    # Convert to OpenAI format
+                    return {
+                        "id": "chatcmpl-ollama",
+                        "object": "chat.completion",
+                        "created": int(asyncio.get_event_loop().time()),
+                        "model": request.model,
+                        "choices": [{
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": data.get('response', '')
+                            },
+                            "finish_reason": "stop"
+                        }],
+                        "usage": {
+                            "prompt_tokens": data.get('prompt_eval_count', 0),
+                            "completion_tokens": data.get('eval_count', 0),
+                            "total_tokens": data.get('prompt_eval_count', 0) + data.get('eval_count', 0)
+                        }
+                    }
+                    
+    except Exception as e:
+        logger.error(f"Error in chat completions: {str(e)}")
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Internal server error: {str(e)}"}
+        )
+
+@app.get("/api/ollama/models")
+async def get_ollama_models(ollama_url: str = "http://localhost:11434"):
+    """Get available models from Ollama server"""
+    try:
+        timeout = aiohttp.ClientTimeout(total=15, connect=5)  # 15s total, 5s connect timeout
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(f"{ollama_url}/api/tags") as response:
+                if response.status != 200:
+                    return JSONResponse(
+                        status_code=response.status,
+                        content={"error": f"Failed to connect to Ollama server at {ollama_url}"}
+                    )
+                
+                data = await response.json()
+                return data
+                
+    except aiohttp.ClientError as e:
+        logger.error(f"Connection error to Ollama at {ollama_url}: {str(e)}")
+        return JSONResponse(
+            status_code=503,
+            content={"error": f"Cannot connect to Ollama server at {ollama_url}. Please verify the URL and server status."}
+        )
+    except Exception as e:
+        logger.error(f"Error fetching Ollama models: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to fetch models: {str(e)}"}
+        )
+
+@app.get("/api/ollama/status")
+async def check_ollama_status(ollama_url: str = "http://localhost:11434"):
+    """Check if Ollama server is running"""
+    try:
+        timeout = aiohttp.ClientTimeout(total=10, connect=5)  # 10s total, 5s connect timeout
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(f"{ollama_url}/api/tags", timeout=aiohttp.ClientTimeout(total=5)) as response:
+                return {"status": "connected" if response.status == 200 else "disconnected"}
+                
+    except Exception as e:
+        logger.error(f"Error checking Ollama status: {str(e)}")
+        return {"status": "disconnected", "error": str(e)}
+
+@app.get("/api/ollama/test-connection")
+async def test_ollama_connection(ollama_url: str = "http://localhost:11434"):
+    """Test connection to Ollama server and return detailed info"""
+    try:
+        timeout = aiohttp.ClientTimeout(total=10, connect=5)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            # Test basic connectivity
+            start_time = asyncio.get_event_loop().time()
+            async with session.get(f"{ollama_url}/api/tags") as response:
+                end_time = asyncio.get_event_loop().time()
+                response_time = round((end_time - start_time) * 1000, 2)  # Convert to ms
+                
+                if response.status == 200:
+                    data = await response.json()
+                    models_count = len(data.get('models', []))
+                    
+                    return {
+                        "status": "connected",
+                        "url": ollama_url,
+                        "response_time_ms": response_time,
+                        "models_available": models_count,
+                        "server_version": response.headers.get("server", "unknown")
+                    }
+                else:
+                    return {
+                        "status": "error",
+                        "url": ollama_url,
+                        "response_time_ms": response_time,
+                        "error": f"HTTP {response.status}: {response.reason}"
+                    }
+                    
+    except aiohttp.ClientError as e:
+        return {
+            "status": "connection_failed",
+            "url": ollama_url,
+            "error": f"Connection failed: {str(e)}"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "url": ollama_url,
+            "error": f"Unexpected error: {str(e)}"
+        }
 
 if __name__ == "__main__":
     import uvicorn

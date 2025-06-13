@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Package/OPT Fields</title>
+</head>
+<body>
+    <h1>Debug Package/OPT Fields Test</h1>
+    <p>Open the browser console (F12) and upload two XML files to see the debug output.</p>
+    <p>Instructions:</p>
+    <ol>
+        <li>Go to <a href="http://localhost:8081" target="_blank">http://localhost:8081</a></li>
+        <li>Open browser console (F12)</li>
+        <li>Upload test-data/a_old.xml and test-data/a_new.xml</li>
+        <li>Click Compare</li>
+        <li>Look for the debug logs from getFootprint and getOpt functions</li>
+        <li>Check what data structure is being passed to the BOM component</li>
+    </ol>
+    
+    <h2>Expected Debug Output:</h2>
+    <pre>
+    - getFootprint logs showing component data structure
+    - getOpt logs showing component data structure  
+    - Check if PACKAGE and OPT fields are present in the logged data
+    - Check if the frontend mapping preserves these fields correctly
+    </pre>
+</body>
+</html>

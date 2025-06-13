@@ -154,33 +154,34 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
     a.download = `bom-comparison-summary-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     window.URL.revokeObjectURL(url);
-  };
-  const getCompReference = (component: any): string => {
+  };  const getCompReference = (component: any): string => {
     const val = component?.REFDES || component?.reference || component?.Reference;
     return val ? String(val).trim() : '';
-  }
+  };
+  
   const getPartNumber = (component: any): string => {
     const val = component?.PartNumber || component?.partNumber || component?.['PART-NUM'];
     return val ? String(val).trim() : '';
-  }
+  };
+  
   const getQuantity = (component: any): string => {
     const val = component?.QTY || component?.quantity || component?.value;
     return val ? String(val).trim() : '';
-  }
+  };
+  
   const getFootprint = (component: any): string => {
     const val = component?.PACKAGE || component?.footprint || component?.FOOTPRINT || component?.Package;
     return val ? String(val).trim() : '';
-  }
+  };
   
   const getDescription = (component: any): string => {
     const val = component?.DESCRIPTION || component?.description || component?.DESC;
     return val ? String(val).trim() : '';
   }
-  
   const getOpt = (component: any): string => {
     const val = component?.OPT || component?.Opt || component?.opt || component?.OPTION;
     return val ? String(val).trim() : '';
-  }
+  };
 
   // Only render if there are any BOM comparison results
   if (!hasData) {

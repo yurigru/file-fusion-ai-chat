@@ -1,19 +1,13 @@
-
-import { useState } from "react";
-import { Check, ChevronsUpDown, Server, Wrench, Plus, Trash } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, ChevronsUpDown, Server, Wrench, Plus, Trash, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Tabs,
   TabsContent,
@@ -22,65 +16,43 @@ import {
 } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { 
-  OllamaModel, 
-  ServerConfig, 
-  MCPServerType,
-  MCPTool,
-  MCPServerConfig
+import { useToast } from "@/hooks/use-toast";
+import { OllamaService } from "@/services/ollamaService";
+import type { 
+  OllamaModelInfo, 
+  ModelSelectorProps, 
+  MCPServerConfig, 
+  MCPServerType 
 } from "@/types";
 
-interface ModelSelectorProps {
-  selectedModel: OllamaModel | string;
-  onModelChange: (model: OllamaModel | string) => void;
-  serverConfig: ServerConfig;
-  onServerConfigChange: (config: ServerConfig) => void;
-}
-
-const ollamaModels: { value: OllamaModel; label: string; description: string }[] = [
-  { value: "llama3", label: "Llama 3", description: "General purpose model by Meta" },
-  { value: "llama3:8b", label: "Llama 3 8B", description: "Smaller, faster Llama 3 variant" },
-  { value: "llama3:70b", label: "Llama 3 70B", description: "Largest Llama 3 variant with highest capability" },
-  { value: "mistral", label: "Mistral", description: "Efficient language model with strong reasoning" },
-  { value: "mixtral", label: "Mixtral", description: "Mixture of experts architecture" },
-  { value: "codellama", label: "CodeLlama", description: "Specialized for programming tasks" },
-  { value: "phi3", label: "Phi-3", description: "Microsoft's compact performant model" },
-  { value: "gemma", label: "Gemma", description: "Google's lightweight model" },
+// Default MCP tools configuration
+const defaultTools = [
+  { id: "file_operations", name: "File Operations", description: "Read and write files", enabled: true },
+  { id: "web_search", name: "Web Search", description: "Search the web", enabled: true },
+  { id: "code_analysis", name: "Code Analysis", description: "Analyze code", enabled: true },
+  { id: "data_processing", name: "Data Processing", description: "Process data", enabled: true }
 ];
 
+// Static model list for fallback
+const staticOllamaModels = [
+  { name: "llama3.2:latest", value: "llama3.2:latest", displayName: "Llama 3.2 (Latest)", description: "Most recent Llama 3.2 model" },
+  { name: "llama3.2", value: "llama3.2", displayName: "Llama 3.2", description: "Latest Llama 3.2 release" },
+  { name: "llama3.1:latest", value: "llama3.1:latest", displayName: "Llama 3.1 (Latest)", description: "Most recent Llama 3.1 model" },
+  { name: "llama3.1", value: "llama3.1", displayName: "Llama 3.1", description: "Latest Llama 3.1 release" },
+  { name: "llama3:latest", value: "llama3:latest", displayName: "Llama 3 (Latest)", description: "Most recent Llama 3 model" },
+  { name: "llama3", value: "llama3", displayName: "Llama 3", description: "Latest Llama 3 release" },
+  { name: "codellama:latest", value: "codellama:latest", displayName: "Code Llama (Latest)", description: "Code-focused Llama model" },
+  { name: "codellama", value: "codellama", displayName: "Code Llama", description: "Code generation model" },
+];
+
+// MCP Server types
 const mcpServerTypes = [
-  { value: "local", label: "Local MCP Server", description: "Connect to MCP server running locally" },
-  { value: "remote", label: "Remote MCP Server", description: "Connect to remote MCP server instance" },
-  { value: "custom", label: "Custom MCP Server", description: "Connect to custom MCP server configuration" },
-];
-
-const defaultTools: MCPTool[] = [
-  { 
-    id: "web-search", 
-    name: "Web Search", 
-    description: "Search the web for information", 
-    enabled: true 
-  },
-  { 
-    id: "file-analyzer", 
-    name: "File Analyzer", 
-    description: "Analyze BOM and netlist files", 
-    enabled: true 
-  },
-  { 
-    id: "schema-validator", 
-    name: "Schema Validator", 
-    description: "Validate electronic schematics", 
-    enabled: false 
-  },
-  { 
-    id: "component-lookup", 
-    name: "Component Lookup", 
-    description: "Look up electronic component information", 
-    enabled: false 
-  },
+  { value: "local", label: "Local MCP Server", description: "Run MCP server locally" },
+  { value: "remote", label: "Remote MCP Server", description: "Connect to remote MCP server" },
+  { value: "custom", label: "Custom Configuration", description: "Custom MCP setup" },
 ];
 
 const ModelSelector = ({ 
@@ -89,9 +61,16 @@ const ModelSelector = ({
   serverConfig, 
   onServerConfigChange 
 }: ModelSelectorProps) => {
-  const [open, setOpen] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
+  const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState<"ollama" | "mcp">(serverConfig.type);
+  
+  // Ollama state
+  const [ollamaModels, setOllamaModels] = useState<OllamaModelInfo[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [ollamaConnected, setOllamaConnected] = useState(false);
+  const [ollamaUrl, setOllamaUrl] = useState(serverConfig.ollamaUrl || "http://localhost:11434");
+  const [ollamaService, setOllamaService] = useState<OllamaService>();
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
   
   const [mcpConfig, setMcpConfig] = useState<MCPServerConfig>(
     serverConfig.mcpConfig || {
@@ -103,8 +82,147 @@ const ModelSelector = ({
     }
   );
   
-  const [newToolName, setNewToolName] = useState("");
-  const [newToolDescription, setNewToolDescription] = useState("");
+  // Force immediate connection on component mount
+  useEffect(() => {
+    console.log("ModelSelector mounted, forcing immediate Ollama connection...");
+    const service = new OllamaService(ollamaUrl);
+    setOllamaService(service);
+    checkOllamaConnection(service);
+  }, []); // Empty dependency array to run only once on mount
+
+  // Initialize Ollama service when URL changes and auto-connect immediately
+  useEffect(() => {
+    const service = new OllamaService(ollamaUrl);
+    setOllamaService(service);
+    // Auto-connect immediately on component mount or URL change
+    console.log("Initializing Ollama connection...");
+    checkOllamaConnection(service);
+  }, [ollamaUrl]);// Auto-select llama3.2 if available and no model is selected or using generic default
+  // Only auto-select once on initial load, don't override manual selections
+  useEffect(() => {
+    if (ollamaConnected && Array.isArray(ollamaModels) && ollamaModels.length > 0 && !hasAutoSelected) {
+      // Only auto-select if we don't have a valid selected model from the available models
+      const isValidSelectedModel = selectedModel && ollamaModels.find(m => m && m.name === selectedModel);
+      
+      if (!isValidSelectedModel) {
+        // Look for llama3.2 variants in order of preference
+        const preferredModel = ollamaModels.find(m => 
+          m && m.name && (
+            m.name === "llama3.2:latest" ||
+            m.name === "llama3.2" || 
+            m.name.startsWith("llama3.2:")
+          )
+        );
+          if (preferredModel) {          console.log(`Auto-selecting preferred model: ${preferredModel.name}`);
+          onModelChange(preferredModel.name);
+          onServerConfigChange({
+            ...serverConfig,
+            type: "ollama",
+            modelName: preferredModel.name,
+            ollamaUrl: ollamaUrl
+          });
+          toast({
+            title: "Auto-selected model",
+            description: `🤖 Auto-selected model: ${preferredModel.name}`,
+          });
+          setHasAutoSelected(true);
+        } else {
+          // Fallback to first available model if llama3.2 not found
+          const firstModel = ollamaModels.find(m => m && m.name);
+          if (firstModel) {            console.log(`llama3.2 not found, selecting first available: ${firstModel.name}`);
+            onModelChange(firstModel.name);
+            onServerConfigChange({
+              ...serverConfig,
+              type: "ollama",
+              modelName: firstModel.name,
+              ollamaUrl: ollamaUrl
+            });
+            toast({
+              title: "Model selected",
+              description: `🤖 Selected first available model: ${firstModel.name}`,
+            });
+            setHasAutoSelected(true);
+          }
+        }
+      } else {
+        // Valid model already selected, mark as auto-selected to prevent future overrides
+        setHasAutoSelected(true);
+      }
+    }
+  }, [ollamaConnected, ollamaModels, selectedModel, hasAutoSelected]);
+  // Auto-refresh models every 30 seconds when connected (disabled for better UX)
+  // useEffect(() => {
+  //   if (!ollamaConnected || !ollamaService) return;
+
+  //   const interval = setInterval(() => {
+  //     console.log("Auto-refreshing models...");
+  //     checkOllamaConnection(ollamaService);
+  //   }, 30000); // 30 seconds
+
+  //   return () => clearInterval(interval);
+  // }, [ollamaConnected, ollamaService]);
+  // Check Ollama connection and fetch models
+  const checkOllamaConnection = async (service: OllamaService) => {
+    console.log("Checking Ollama connection...");
+    setIsLoadingModels(true);
+    try {
+      console.log("Testing Ollama server at:", ollamaUrl);
+      const isRunning = await service.isServerRunning();
+      setOllamaConnected(isRunning);
+        if (isRunning) {
+        console.log("Ollama server is running, fetching models...");
+        const models = await service.getModels();
+        // Ensure models is always an array
+        const safeModels = Array.isArray(models) ? models : [];
+        setOllamaModels(safeModels);        console.log(`Successfully found ${safeModels.length} models:`, safeModels.map(m => m?.name || 'unnamed'));
+        toast({
+          title: "Connected to Ollama",
+          description: `✅ Connected to Ollama - Found ${safeModels.length} models`,
+        });
+      } else {        setOllamaModels([]);
+        console.log("Ollama server is not running");
+        toast({
+          title: "Connection failed",
+          description: "❌ Cannot connect to Ollama server. Make sure Ollama is running.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {      console.error("Error connecting to Ollama:", error);
+      setOllamaConnected(false);
+      setOllamaModels([]);
+      toast({
+        title: "Connection error",
+        description: "❌ Failed to connect to Ollama server",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
+  // Refresh models
+  const refreshOllamaModels = () => {
+    if (ollamaService) {
+      checkOllamaConnection(ollamaService);
+    }  };
+  // Helper functions
+  const getModelDisplayName = (modelName: string): string => {
+    if (!modelName) return "Select model...";
+    
+    const staticModel = Array.isArray(staticOllamaModels) && staticOllamaModels.find(m => m && m.value === modelName);
+    if (staticModel) return staticModel.displayName;
+    
+    const ollamaModel = Array.isArray(ollamaModels) && ollamaModels.find(m => m && m.name === modelName);
+    if (ollamaModel) return ollamaModel.name;
+    
+    return modelName;
+  };
+
+  const formatModelSize = (sizeInBytes: number): string => {
+    if (!sizeInBytes || isNaN(sizeInBytes)) return "Unknown size";
+    const gb = sizeInBytes / (1024 * 1024 * 1024);
+    return `${gb.toFixed(1)} GB`;
+  };
 
   const handleTabChange = (value: string) => {
     const tabValue = value as "ollama" | "mcp";
@@ -114,21 +232,20 @@ const ModelSelector = ({
     if (tabValue === "ollama") {
       onServerConfigChange({
         type: "ollama",
-        modelName: selectedModel as OllamaModel,
-        ollamaUrl: serverConfig.ollamaUrl || "http://localhost:11434"
+        modelName: selectedModel as string,
+        ollamaUrl: ollamaUrl
       });
     } else {
       onServerConfigChange({
         type: "mcp",
-        modelName: "mcp-model",
-        mcpConfig
+        modelName: selectedModel as string,
+        mcpConfig: mcpConfig
       });
     }
   };
 
   const handleMCPServerChange = (serverType: MCPServerType) => {
-    let newUrl = "";
-    
+    let newUrl;
     switch (serverType) {
       case "local":
         newUrl = "http://localhost:8080";
@@ -149,24 +266,12 @@ const ModelSelector = ({
       serverType
     };
     
-    setMcpConfig(updatedConfig);
-    
+    setMcpConfig(updatedConfig);    
     onServerConfigChange({
       ...serverConfig,
       type: "mcp",
       mcpConfig: updatedConfig
     });
-    
-    setOpen(false);
-  };
-
-  const handleCustomServerSubmit = () => {
-    onServerConfigChange({
-      ...serverConfig,
-      type: "mcp",
-      mcpConfig
-    });
-    setOpen(false);
   };
 
   const toggleTool = (toolId: string) => {
@@ -188,48 +293,6 @@ const ModelSelector = ({
     });
   };
 
-  const addNewTool = () => {
-    if (!newToolName.trim()) return;
-    
-    const newTool: MCPTool = {
-      id: `tool-${Date.now()}`,
-      name: newToolName,
-      description: newToolDescription || "Custom tool",
-      enabled: true
-    };
-    
-    const updatedConfig = {
-      ...mcpConfig,
-      tools: [...mcpConfig.tools, newTool]
-    };
-    
-    setMcpConfig(updatedConfig);
-    
-    onServerConfigChange({
-      ...serverConfig,
-      type: "mcp",
-      mcpConfig: updatedConfig
-    });
-    
-    setNewToolName("");
-    setNewToolDescription("");
-  };
-
-  const removeTool = (toolId: string) => {
-    const updatedConfig = {
-      ...mcpConfig,
-      tools: mcpConfig.tools.filter(tool => tool.id !== toolId)
-    };
-    
-    setMcpConfig(updatedConfig);
-    
-    onServerConfigChange({
-      ...serverConfig,
-      type: "mcp",
-      mcpConfig: updatedConfig
-    });
-  };
-
   return (
     <div className="space-y-2">
       <Tabs value={selectedTab} onValueChange={handleTabChange} className="w-full">
@@ -237,118 +300,218 @@ const ModelSelector = ({
           <TabsTrigger value="ollama">Ollama</TabsTrigger>
           <TabsTrigger value="mcp">MCP Server</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="ollama" className="space-y-2">
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-full justify-between"
-              >
-                {selectedModel && selectedTab === "ollama"
-                  ? ollamaModels.find((model) => model.value === selectedModel)?.label || selectedModel
-                  : "Select model..."}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0">
-              <Command>
-                <CommandInput placeholder="Search models..." />
-                <CommandEmpty>No model found.</CommandEmpty>
-                <CommandGroup>
-                  {ollamaModels.map((model) => (
-                    <CommandItem
-                      key={model.value}
-                      value={model.value}
-                      onSelect={() => {
-                        onModelChange(model.value as OllamaModel);
-                        onServerConfigChange({
-                          ...serverConfig,
-                          type: "ollama",
-                          modelName: model.value,
-                          ollamaUrl: serverConfig.ollamaUrl || "http://localhost:11434"
-                        });
-                        setOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={`mr-2 h-4 w-4 ${
-                          selectedModel === model.value ? "opacity-100" : "opacity-0"
-                        }`}
-                      />
-                      <div className="flex flex-col">
-                        <span>{model.label}</span>
-                        <span className="text-xs text-muted-foreground">{model.description}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          
-          <div className="pt-2">
-            <div className="space-y-1">
-              <Label htmlFor="ollama-url">Ollama Server URL</Label>
-              <Input
-                id="ollama-url"
-                placeholder="http://localhost:11434"
-                value={serverConfig.ollamaUrl || "http://localhost:11434"}
-                onChange={(e) => onServerConfigChange({
+          <TabsContent value="ollama" className="space-y-4">
+          {/* Ollama Model Selection */}
+          <div className="space-y-2">
+            <Label>Model Selection</Label>
+            <Select
+              value={selectedModel && selectedTab === "ollama" ? selectedModel : ""}
+              onValueChange={(value) => {
+                onModelChange(value);
+                onServerConfigChange({
                   ...serverConfig,
-                  ollamaUrl: e.target.value
-                })}
-              />
+                  type: "ollama",
+                  modelName: value,
+                  ollamaUrl: ollamaUrl
+                });
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select model..." />
+              </SelectTrigger>
+              <SelectContent>
+                {/* Connection Status */}
+                <div className="p-2 border-b flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${ollamaConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="text-sm">
+                      {ollamaConnected ? 'Connected' : 'Disconnected'}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={refreshOllamaModels}
+                    disabled={isLoadingModels}
+                    className="h-6 w-6 p-0"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isLoadingModels ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+
+                {/* Loading State */}
+                {isLoadingModels && (
+                  <div className="flex items-center justify-center py-4">
+                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    Loading models...
+                  </div>
+                )}
+
+                {/* Available Models from Ollama Server */}
+                {ollamaConnected && Array.isArray(ollamaModels) && ollamaModels.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                      Available Models ({ollamaModels.length})
+                    </div>
+                    {ollamaModels.filter(model => model && model.name).map((model) => (
+                      <SelectItem key={model.name} value={model.name}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{model.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {model.size ? formatModelSize(model.size) : 'Unknown size'} • {model.details?.parameter_size || 'Unknown params'} • Modified: {model.modified_at ? new Date(model.modified_at).toLocaleDateString() : 'Unknown date'}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+
+                {/* Fallback Static Models - only show if not connected or no models found */}
+                {(!ollamaConnected || !Array.isArray(ollamaModels) || ollamaModels.length === 0) && (
+                  <>
+                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                      Popular Models (Download Required)
+                    </div>
+                    {Array.isArray(staticOllamaModels) && staticOllamaModels.map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{model.displayName}</span>
+                          <span className="text-xs text-muted-foreground">{model.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+
+                {/* No Models Available */}
+                {!isLoadingModels && (!Array.isArray(ollamaModels) || ollamaModels.length === 0) && (!Array.isArray(staticOllamaModels) || staticOllamaModels.length === 0) && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No models found
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+            {/* Ollama Server Configuration */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="ollama-url">Ollama Server URL</Label>              <div className="flex space-x-2">
+                <Input
+                  id="ollama-url"
+                  placeholder="http://localhost:11434 or http://192.168.1.100:11434"
+                  value={ollamaUrl}
+                  onChange={(e) => setOllamaUrl(e.target.value)}
+                  className={!OllamaService.isValidUrl(ollamaUrl) && ollamaUrl.length > 0 ? "border-red-500" : ""}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => {                    if (!OllamaService.isValidUrl(ollamaUrl)) {
+                      toast({
+                        title: "Invalid URL",
+                        description: "Please enter a valid URL (e.g., http://192.168.1.100:11434)",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    onServerConfigChange({
+                      ...serverConfig,
+                      ollamaUrl: ollamaUrl
+                    });
+                    if (ollamaService) {
+                      checkOllamaConnection(ollamaService);
+                    }
+                  }}
+                  disabled={isLoadingModels}
+                >
+                  {isLoadingModels ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Connect"}
+                </Button>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Examples: <br />
+                • Local: http://localhost:11434 <br />
+                • Remote IP: http://192.168.1.100:11434 <br />
+                • Remote hostname: http://my-ollama-server:11434
+              </div>
             </div>
+
+            {/* Connection Status Alert */}
+            {!ollamaConnected && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Cannot connect to Ollama server. Make sure Ollama is installed and running.
+                  <br />
+                  <a 
+                    href="https://ollama.ai" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-500 underline mt-1 inline-block"
+                  >
+                    Download Ollama
+                  </a>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Model Download Suggestion */}
+            {ollamaConnected && ollamaModels.length > 0 && !ollamaModels.find(m => m.name.startsWith("llama3.2")) && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Llama 3.2 not found. To download it, run in terminal:
+                  <br />
+                  <code className="bg-muted px-1 py-0.5 rounded text-sm">ollama pull llama3.2</code>
+                  <br />
+                  <span className="text-xs text-muted-foreground">Or try: llama3.2:3b (smaller), llama3.2:1b (fastest)</span>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* No Models Available */}
+            {ollamaConnected && ollamaModels.length === 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  No models found. Download a model to get started:
+                  <br />
+                  <code className="bg-muted px-1 py-0.5 rounded text-sm">ollama pull llama3.2</code>
+                  <br />
+                  <span className="text-xs text-muted-foreground">Other options: mistral, codellama, phi3</span>
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         </TabsContent>
-        
-        <TabsContent value="mcp" className="space-y-4">
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-full justify-between"
-              >
-                {mcpConfig.serverType 
-                  ? mcpServerTypes.find((server) => server.value === mcpConfig.serverType)?.label || "Select MCP server..." 
-                  : "Select MCP server..."}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0">
-              <Command>
-                <CommandInput placeholder="Search server types..." />
-                <CommandEmpty>No server type found.</CommandEmpty>
-                <CommandGroup>
-                  {mcpServerTypes.map((server) => (
-                    <CommandItem
-                      key={server.value}
-                      value={server.value}
-                      onSelect={() => handleMCPServerChange(server.value as MCPServerType)}
-                    >
-                      <Check
-                        className={`mr-2 h-4 w-4 ${
-                          mcpConfig.serverType === server.value ? "opacity-100" : "opacity-0"
-                        }`}
-                      />
-                      <div className="flex flex-col">
-                        <span>{server.label}</span>
-                        <span className="text-xs text-muted-foreground">{server.description}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          
-          <div className="space-y-3">
-            <div className="space-y-1">
+          <TabsContent value="mcp" className="space-y-4">
+          {/* MCP Server Selection */}
+          <div className="space-y-2">
+            <Label>MCP Server Type</Label>
+            <Select
+              value={mcpConfig.serverType}
+              onValueChange={(value) => handleMCPServerChange(value as MCPServerType)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select MCP server..." />
+              </SelectTrigger>
+              <SelectContent>
+                <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                  MCP Servers
+                </div>
+                {mcpServerTypes.map((server) => (
+                  <SelectItem key={server.value} value={server.value}>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">{server.label}</span>
+                      <span className="text-xs text-muted-foreground">{server.description}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* MCP Server Configuration */}
+          <div className="space-y-4">
+            <div className="space-y-2">
               <Label htmlFor="mcp-url">MCP Server URL</Label>
               <Input
                 id="mcp-url"
@@ -367,107 +530,14 @@ const ModelSelector = ({
                 }}
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="api-key">API Key (optional)</Label>
-              <Input
-                id="api-key"
-                type="password"
-                placeholder="Enter API key"
-                value={mcpConfig.apiKey || ""}
-                onChange={(e) => {
-                  const updatedConfig = {
-                    ...mcpConfig,
-                    apiKey: e.target.value
-                  };
-                  setMcpConfig(updatedConfig);
-                  onServerConfigChange({
-                    ...serverConfig,
-                    mcpConfig: updatedConfig
-                  });
-                }}
-              />
-            </div>
             
-            <Separator className="my-2" />
-            
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <Label>MCP Tools Configuration</Label>
-                <Popover open={toolsOpen} onOpenChange={setToolsOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Wrench className="h-4 w-4 mr-1" /> Configure Tools
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[350px]">
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Available Tools</h4>
-                      <div className="space-y-2">
-                        {mcpConfig.tools.map(tool => (
-                          <div key={tool.id} className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="font-medium">{tool.name}</div>
-                              <div className="text-xs text-muted-foreground">{tool.description}</div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Switch 
-                                checked={tool.enabled} 
-                                onCheckedChange={() => toggleTool(tool.id)} 
-                              />
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => removeTool(tool.id)}
-                              >
-                                <Trash className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div className="space-y-2">
-                        <h4 className="font-medium">Add Custom Tool</h4>
-                        <div className="space-y-2">
-                          <Input
-                            placeholder="Tool name"
-                            value={newToolName}
-                            onChange={(e) => setNewToolName(e.target.value)}
-                          />
-                          <Input
-                            placeholder="Description (optional)"
-                            value={newToolDescription}
-                            onChange={(e) => setNewToolDescription(e.target.value)}
-                          />
-                          <Button 
-                            className="w-full"
-                            onClick={addNewTool}
-                            disabled={!newToolName.trim()}
-                          >
-                            <Plus className="h-4 w-4 mr-1" /> Add Tool
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <div className="text-sm text-muted-foreground mt-1">
-                {mcpConfig.tools.filter(t => t.enabled).length} tools enabled
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="context-size">Context Size</Label>
                 <Input
                   id="context-size"
                   type="number"
-                  placeholder="4096"
-                  value={mcpConfig.contextSize || 4096}
+                  value={mcpConfig.contextSize}
                   onChange={(e) => {
                     const updatedConfig = {
                       ...mcpConfig,
@@ -481,13 +551,13 @@ const ModelSelector = ({
                   }}
                 />
               </div>
-              <div className="space-y-1">
+              
+              <div className="space-y-2">
                 <Label htmlFor="max-tokens">Max Tokens</Label>
                 <Input
                   id="max-tokens"
                   type="number"
-                  placeholder="1024"
-                  value={mcpConfig.maxTokens || 1024}
+                  value={mcpConfig.maxTokens}
                   onChange={(e) => {
                     const updatedConfig = {
                       ...mcpConfig,
@@ -500,6 +570,25 @@ const ModelSelector = ({
                     });
                   }}
                 />
+              </div>
+            </div>
+            
+            {/* Tools Configuration */}
+            <div className="space-y-2">
+              <Label>Available Tools</Label>
+              <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+                {mcpConfig.tools.map((tool) => (
+                  <div key={tool.id} className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{tool.name}</span>
+                      <span className="text-xs text-muted-foreground">{tool.description}</span>
+                    </div>
+                    <Switch
+                      checked={tool.enabled}
+                      onCheckedChange={() => toggleTool(tool.id)}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
