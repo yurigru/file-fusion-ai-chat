@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Request
+from fastapi import FastAPI, UploadFile, File, Request, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from typing import List, Dict, Any, Optional
@@ -10,6 +10,7 @@ import traceback
 import json
 import aiohttp
 import asyncio
+from rag_service import rag_service
 
 # Configure logging
 logging.basicConfig(
@@ -595,8 +596,7 @@ async def test_ollama_connection(ollama_url: str = "http://localhost:11434"):
                     }
                     
     except aiohttp.ClientError as e:
-        return {
-            "status": "connection_failed",
+        return {            "status": "connection_failed",
             "url": ollama_url,
             "error": f"Connection failed: {str(e)}"
         }
@@ -606,6 +606,123 @@ async def test_ollama_connection(ollama_url: str = "http://localhost:11434"):
             "url": ollama_url,
             "error": f"Unexpected error: {str(e)}"
         }
+
+# RAG Endpoints
+@app.post("/api/rag/add-bom")
+async def add_bom_to_knowledge(
+    file: UploadFile = File(...),
+    source_name: str = Form(...)
+):
+    """Add BOM file to knowledge base"""
+    try:
+        content = await file.read()
+        content_str = content.decode('utf-8')
+        
+        # Parse the XML content
+        bom_data = rag_service.parse_xml_bom(content_str)
+        
+        # Add to knowledge base
+        await rag_service.add_bom_to_knowledge(bom_data, source_name)
+        
+        return {
+            "status": "success",
+            "message": f"Added {len(bom_data.get('components', []))} components to knowledge base",
+            "source": source_name,
+            "component_count": len(bom_data.get('components', []))
+        }
+    except Exception as e:
+        logger.error(f"Failed to add BOM to knowledge base: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to add BOM: {str(e)}")
+
+@app.post("/api/rag/query")
+async def query_knowledge(request: dict):
+    """Query the RAG knowledge base"""
+    query = request.get("query", "")
+    n_results = request.get("n_results", 5)
+    
+    if not query.strip():
+        return {"results": [], "message": "Empty query"}
+    
+    try:
+        results = await rag_service.query_similar_components(query, n_results)
+        return results
+    except Exception as e:
+        logger.error(f"Knowledge query failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+
+@app.get("/api/rag/stats")
+async def get_knowledge_stats():
+    """Get knowledge base statistics"""
+    try:
+        stats = rag_service.get_knowledge_stats()
+        return stats
+    except Exception as e:
+        logger.error(f"Stats retrieval failed: {e}")
+        return {
+            "components": 0,
+            "patterns": 0,
+            "total": 0,
+            "status": "error",
+            "error": str(e)
+        }
+
+@app.post("/api/chat/rag-completions")
+async def rag_chat_completions(request: ChatRequest):
+    """Enhanced chat with RAG context"""
+    try:
+        # Extract the user's last message for knowledge retrieval
+        user_messages = [msg for msg in request.messages if msg.role == "user"]
+        if user_messages:
+            last_query = user_messages[-1].content
+            
+            # Get relevant knowledge
+            knowledge_context = await rag_service.get_contextual_knowledge(last_query)
+            
+            # Enhance system prompt with retrieved knowledge
+            enhanced_messages = []
+            system_enhanced = False
+            
+            for msg in request.messages:
+                if msg.role == "system" and not system_enhanced:
+                    enhanced_content = f"{msg.content}\n\n{knowledge_context}"
+                    enhanced_messages.append({"role": "system", "content": enhanced_content})
+                    system_enhanced = True
+                else:
+                    enhanced_messages.append({"role": msg.role, "content": msg.content})
+            
+            # If no system message, add one with knowledge
+            if not system_enhanced:
+                enhanced_messages.insert(0, {
+                    "role": "system", 
+                    "content": f"You are an expert electronics engineer and BOM analyst.\n\n{knowledge_context}"
+                })
+            
+            # Forward to Ollama with enhanced context
+            ollama_request = {
+                "model": request.model,
+                "messages": enhanced_messages,
+                "stream": request.stream
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{request.ollama_url}/v1/chat/completions",
+                    json=ollama_request,
+                    timeout=aiohttp.ClientTimeout(total=60)
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        return result
+                    else:
+                        error_text = await response.text()
+                        raise HTTPException(status_code=response.status, detail=error_text)
+        
+        # Fallback to regular chat if no enhancement possible
+        return await chat_completions(request)
+        
+    except Exception as e:
+        logger.error(f"RAG chat completion failed: {e}")
+        raise HTTPException(status_code=500, detail=f"RAG chat failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
