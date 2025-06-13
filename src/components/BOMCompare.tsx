@@ -13,7 +13,7 @@ interface BOMCompareProps {
 
 const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
   const [hasData, setHasData] = useState(false);
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
 
   useEffect(() => {
     // Check if there is any data to display
@@ -37,46 +37,42 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
   // Export functions
   const exportToCSV = () => {
     const csvRows = [];
-    csvRows.push(['Change Type', 'Reference', 'Part Name', 'Quantity', 'Package', 'Description'].join(','));
-
-    addedComponents.forEach(comp => {
+    csvRows.push(['Change Type', 'Reference', 'Part Name', 'Package', 'OPT', 'Description'].join(','));    addedComponents.forEach(comp => {
       csvRows.push([
         'Added',
         getCompReference(comp),
         getPartNumber(comp),
-        getQuantity(comp),
         getFootprint(comp),
+        getOpt(comp),
         getDescription(comp)
       ].map(field => `"${field}"`).join(','));
     });
-    
-    deletedComponents.forEach(comp => {
+      deletedComponents.forEach(comp => {
       csvRows.push([
         'Removed',
         getCompReference(comp),
         getPartNumber(comp),
-        getQuantity(comp),
         getFootprint(comp),
+        getOpt(comp),
         getDescription(comp)
       ].map(field => `"${field}"`).join(','));
-    });      changedComponents.forEach(chg => {
+    });changedComponents.forEach(chg => {
       const original = chg.original || {}; // Frontend provides lowercase keys
       const modified = chg.modified || {}; // Frontend provides lowercase keys
       const ref = chg.reference || '';
       csvRows.push([
-        'Changed (Old)',
-        ref, 
+        'Changed (Old)',        ref, 
         getPartNumber(original),
-        getQuantity(original),
         getFootprint(original),
+        getOpt(original),
         getDescription(original)
       ].map(field => `"${field}"`).join(','));
       csvRows.push([
         'Changed (New)',
         ref,
         getPartNumber(modified),
-        getQuantity(modified),
         getFootprint(modified),
+        getOpt(modified),
         getDescription(modified)
       ].map(field => `"${field}"`).join(','));
     });
@@ -114,42 +110,39 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
       });
       report.push('');
     }
-    
-    if (addedComponents.length > 0) {
+      if (addedComponents.length > 0) {
       report.push(`Added Components (${addedComponents.length}):`);
       (addedComponents as any[]).forEach(comp => {
         const ref = getCompReference(comp);
         const partNum = getPartNumber(comp);
-        const qty = getQuantity(comp);
-        report.push(`  ${ref}: ${partNum} (${qty})`);
+        const opt = getOpt(comp);
+        report.push(`  ${ref}: ${partNum}${opt ? ` (${opt})` : ''}`);
       });
       report.push('');
     }
-    
-    if (deletedComponents.length > 0) {
+      if (deletedComponents.length > 0) {
       report.push(`Removed Components (${deletedComponents.length}):`);
       (deletedComponents as any[]).forEach(comp => {
         const ref = getCompReference(comp);
         const partNum = getPartNumber(comp);
-        const qty = getQuantity(comp);
-        report.push(`  ${ref}: ${partNum} (${qty})`);
+        const opt = getOpt(comp);
+        report.push(`  ${ref}: ${partNum}${opt ? ` (${opt})` : ''}`);
       });
       report.push('');
-    }      if (changedComponents.length > 0) {
+    }if (changedComponents.length > 0) {
       report.push(`Changed Components (${changedComponents.length}):`);
-      (changedComponents as any[]).forEach(chg => {
-        const ref = chg.reference || ''; 
+      (changedComponents as any[]).forEach(chg => {        const ref = chg.reference || ''; 
         const original = chg.original || {}; // Frontend provides lowercase keys
         const modified = chg.modified || {}; // Frontend provides lowercase keys
         
         const origPartNum = getPartNumber(original);
-        const origQty = getQuantity(original);
+        const origOpt = getOpt(original);
         const modPartNum = getPartNumber(modified);
-        const modQty = getQuantity(modified);
+        const modOpt = getOpt(modified);
         
         report.push(`  ${ref}:`);
-        report.push(`    Old: ${origPartNum} (${origQty})`);
-        report.push(`    New: ${modPartNum} (${modQty})`);
+        report.push(`    Old: ${origPartNum}${origOpt ? ` (${origOpt})` : ''}`);
+        report.push(`    New: ${modPartNum}${modOpt ? ` (${modOpt})` : ''}`);
       });
     }
     
@@ -178,8 +171,14 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
     const val = component?.PACKAGE || component?.footprint || component?.FOOTPRINT || component?.Package;
     return val ? String(val).trim() : '';
   }
+  
   const getDescription = (component: any): string => {
     const val = component?.DESCRIPTION || component?.description || component?.DESC;
+    return val ? String(val).trim() : '';
+  }
+  
+  const getOpt = (component: any): string => {
+    const val = component?.OPT || component?.Opt || component?.opt || component?.OPTION;
     return val ? String(val).trim() : '';
   }
 
@@ -193,23 +192,22 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
         </p>
       </div>    );
   }
-
   const renderComponentRow = (comp: any, rowKey: string | number) => {
     const partNumber = getPartNumber(comp);
-    const quantity = getQuantity(comp);
     const footprint = getFootprint(comp);
     const description = getDescription(comp);
     const reference = getCompReference(comp);
+    const opt = getOpt(comp);
 
     return (
       <tr key={rowKey} className="hover:bg-gray-50">
         <td className="p-2 border">{reference}</td>
         <td className="p-2 border font-mono text-sm">{partNumber}</td>
-        <td className="p-2 border text-center">{quantity}</td>
         <td className="p-2 border">{footprint}</td>
+        <td className="p-2 border">{opt}</td>
         <td className="p-2 border text-sm">{description}</td>
       </tr>
-    );  };
+    );};
 
   return (
     <div className="space-y-6">
@@ -271,8 +269,8 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
               <table className="min-w-full border-collapse border border-gray-300">                <thead>                  <tr className="bg-green-50">
                     <th className="p-2 border text-left">Reference</th>
                     <th className="p-2 border text-left">Part Name</th>
-                    <th className="p-2 border text-left">Quantity</th>
                     <th className="p-2 border text-left">Package</th>
+                    <th className="p-2 border text-left">OPT</th>
                     <th className="p-2 border text-left">Description</th>
                   </tr>
                 </thead>
@@ -298,8 +296,8 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
               <table className="min-w-full border-collapse border border-gray-300">                <thead>                  <tr className="bg-red-50">
                     <th className="p-2 border text-left">Reference</th>
                     <th className="p-2 border text-left">Part Name</th>
-                    <th className="p-2 border text-left">Quantity</th>
                     <th className="p-2 border text-left">Package</th>
+                    <th className="p-2 border text-left">OPT</th>
                     <th className="p-2 border text-left">Description</th>
                   </tr>
                 </thead>
@@ -368,11 +366,10 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
                   const ref = chg.Reference || chg.reference || `Component-${i}`;
                   const original = chg.Original || chg.original || {};
                   const modified = chg.Modified || chg.modified || {};
-                  
-                  const originalPartNumber = getPartNumber(original);
+                    const originalPartNumber = getPartNumber(original);
                   const modifiedPartNumber = getPartNumber(modified);
-                  const originalQuantity = getQuantity(original);
-                  const modifiedQuantity = getQuantity(modified);
+                  const originalOpt = getOpt(original);
+                  const modifiedOpt = getOpt(modified);
                   const originalFootprint = getFootprint(original);
                   const modifiedFootprint = getFootprint(modified);
                   const originalDescription = getDescription(original);
@@ -402,10 +399,9 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
                     }
                     return null;
                   };
-                  
-                  const hasAnyChange = 
+                    const hasAnyChange = 
                     originalPartNumber !== modifiedPartNumber ||
-                    originalQuantity !== modifiedQuantity ||
+                    originalOpt !== modifiedOpt ||
                     originalFootprint !== modifiedFootprint ||
                     originalDescription !== modifiedDescription;
                   
@@ -417,10 +413,9 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
                           {hasAnyChange && <Badge variant="outline" className="bg-blue-100">Changed</Badge>}
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-3">
-                        {/* Field comparisons */}
+                      <CardContent className="space-y-3">                        {/* Field comparisons */}
                         {renderFieldComparison("Part Number", originalPartNumber, modifiedPartNumber)}
-                        {renderFieldComparison("Quantity", originalQuantity, modifiedQuantity)}
+                        {renderFieldComparison("OPT", originalOpt, modifiedOpt)}
                         {renderFieldComparison("Package", originalFootprint, modifiedFootprint)}
                         {renderFieldComparison("Description", originalDescription, modifiedDescription)}
                         
@@ -453,10 +448,9 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
                       const ref = chg.Reference || chg.reference || `Component-${i}`;
                       const original = chg.Original || chg.original || {};
                       const modified = chg.Modified || chg.modified || {};
-                      
-                      const fields = [
+                        const fields = [
                         { name: 'Part Number', oldVal: getPartNumber(original), newVal: getPartNumber(modified) },
-                        { name: 'Quantity', oldVal: getQuantity(original), newVal: getQuantity(modified) },
+                        { name: 'OPT', oldVal: getOpt(original), newVal: getOpt(modified) },
                         { name: 'Package', oldVal: getFootprint(original), newVal: getFootprint(modified) },
                         { name: 'Description', oldVal: getDescription(original), newVal: getDescription(modified) }
                       ];

@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<SHOWSRVCALLS>
+    <DISPLAY-DEFINITION>
+        <TABLE-TITLE>BOM Report</TABLE-TITLE>
+    </DISPLAY-DEFINITION>
+    <data>
+        <OBJECT>
+            <REFDES>R1</REFDES>
+            <PART-NUM>RES_100</PART-NUM>
+            <PACKAGE>0603</PACKAGE>
+            <OPT>Yes</OPT>
+            <DESCRIPTION>Resistor 100 ohm</DESCRIPTION>
+        </OBJECT>
+        <OBJECT>
+            <REFDES>C1</REFDES>
+            <PART-NUM>CAP_10uF</PART-NUM>
+            <PACKAGE>0805</PACKAGE>
+            <OPT>No</OPT>
+            <DESCRIPTION>Capacitor 10uF</DESCRIPTION>
+        </OBJECT>
+        <OBJECT>
+            <REFDES>U1</REFDES>
+            <PART-NUM>MCU_STM32</PART-NUM>
+            <PACKAGE>QFN64</PACKAGE>
+            <OPT>No</OPT>
+            <DESCRIPTION>STM32 Microcontroller</DESCRIPTION>
+        </OBJECT>
+    </data>
+</SHOWSRVCALLS>

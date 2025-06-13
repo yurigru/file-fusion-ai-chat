@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { ComparisonFiles, ComparisonResult, UploadedFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeftRight, Plus, Minus, Check, RefreshCw } from "lucide-react";
+import { ArrowLeftRight, Plus, Minus, Check, RefreshCw, ArrowRightLeft } from "lucide-react";
 import FileTable from "@/components/FileTable";
 
 interface FileComparisonProps {
   comparisonFiles: ComparisonFiles;
-  onCompare: () => void;
+  onCompare: (swappedFiles?: { oldFile: UploadedFile; newFile: UploadedFile }) => void;
   showTabs?: boolean; // Add optional prop to control tab visibility
 }
 
@@ -21,7 +21,46 @@ const FileComparison = ({ comparisonFiles, onCompare, showTabs = true }: FileCom
   const [addedTable, setAddedTable] = useState<BOMRow[]>([]);
   const [deletedTable, setDeletedTable] = useState<BOMRow[]>([]);
   const [changedTable, setChangedTable] = useState<BOMRow[]>([]);
+  const [isDirectionSwapped, setIsDirectionSwapped] = useState(false);
+  
   const { file1, file2, result } = comparisonFiles;
+  
+  // Get effective file order based on direction
+  const getEffectiveFiles = () => {
+    if (isDirectionSwapped) {
+      return {
+        oldFile: file2,
+        newFile: file1,
+        displayFile1: file2,
+        displayFile2: file1
+      };
+    }
+    return {
+      oldFile: file1,
+      newFile: file2,
+      displayFile1: file1,
+      displayFile2: file2
+    };
+  };
+  
+  const { displayFile1, displayFile2 } = getEffectiveFiles();
+  
+  const handleSwapDirection = () => {
+    setIsDirectionSwapped(!isDirectionSwapped);
+    // Clear any existing result since we've changed the comparison direction
+    // The user will need to click Compare again to get results for the new direction
+  };
+  
+  const handleCompare = () => {
+    if (!file1 || !file2) return;
+    
+    const { oldFile, newFile } = getEffectiveFiles();
+    if (isDirectionSwapped) {
+      onCompare({ oldFile, newFile });
+    } else {
+      onCompare();
+    }
+  };
 
   const updateVisibleLines = () => {
     if (!result) return;
@@ -162,26 +201,41 @@ const FileComparison = ({ comparisonFiles, onCompare, showTabs = true }: FileCom
     return '';
   };
 
-  return (
-    <div className="space-y-4">
+  return (    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">File Comparison</h3>
-        <Button
-          onClick={onCompare}
-          disabled={!file1 || !file2} // Note: This button will not have the loading state
-          className="flex items-center space-x-2"
-        >
-          <ArrowLeftRight className="h-4 w-4 mr-2" />
-          Compare Files
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSwapDirection}
+            disabled={!file1 || !file2}
+            className="flex items-center space-x-1"
+          >
+            <ArrowRightLeft className="h-4 w-4" />
+            <span className="text-xs">Swap Direction</span>
+          </Button>          <Button
+            onClick={handleCompare}
+            disabled={!file1 || !file2}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeftRight className="h-4 w-4 mr-2" />
+            Compare Files
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
         <div className="space-y-2">
-          <p className="text-sm font-medium">File 1:</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">
+              File 1 {isDirectionSwapped && <span className="text-xs text-muted-foreground">(swapped)</span>}:
+            </p>
+            <span className="text-xs text-muted-foreground">Old/Base</span>
+          </div>
           <div className="bg-background p-3 rounded border min-h-20 flex items-center justify-center">
-            {file1 ? (
-              <p className="truncate">{file1.name}</p>
+            {displayFile1 ? (
+              <p className="truncate">{displayFile1.name}</p>
             ) : (
               <p className="text-muted-foreground text-sm">Select first file</p>
             )}
@@ -189,10 +243,15 @@ const FileComparison = ({ comparisonFiles, onCompare, showTabs = true }: FileCom
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium">File 2:</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">
+              File 2 {isDirectionSwapped && <span className="text-xs text-muted-foreground">(swapped)</span>}:
+            </p>
+            <span className="text-xs text-muted-foreground">New/Modified</span>
+          </div>
           <div className="bg-background p-3 rounded border min-h-20 flex items-center justify-center">
-            {file2 ? (
-              <p className="truncate">{file2.name}</p>
+            {displayFile2 ? (
+              <p className="truncate">{displayFile2.name}</p>
             ) : (
               <p className="text-muted-foreground text-sm">Select second file</p>
             )}
@@ -231,7 +290,20 @@ const FileComparison = ({ comparisonFiles, onCompare, showTabs = true }: FileCom
               className="text-xs"
             >
               <RefreshCw className="mr-1 h-3 w-3" /> Refresh
-            </Button>          </div>
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSwapDirection}
+              className="text-xs"
+            >
+              <ArrowRightLeft className="mr-1 h-3 w-3" />
+              Swap Compare Direction
+            </Button>
+          </div>
 
           {showTabs && (
             <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>

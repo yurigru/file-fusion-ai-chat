@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ComparisonFiles, ComparisonResult, ElectronicComponent, NetlistConnection, UploadedFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeftRight, RefreshCw, Table } from "lucide-react";
+import { ArrowLeftRight, RefreshCw, Table, ArrowRightLeft } from "lucide-react";
 import {
   Table as UITable,
   TableBody,
@@ -14,7 +14,7 @@ import {
 
 interface SchematicComparisonProps {
   comparisonFiles: ComparisonFiles;
-  onCompare: () => void;
+  onCompare: (swappedFiles?: { oldFile: UploadedFile; newFile: UploadedFile }) => void;
 }
 
 const SchematicComparison = ({ comparisonFiles, onCompare }: SchematicComparisonProps) => {
@@ -22,8 +22,44 @@ const SchematicComparison = ({ comparisonFiles, onCompare }: SchematicComparison
   const [fileType, setFileType] = useState<"bom" | "netlist" | null>(null);
   const [components, setComponents] = useState<ElectronicComponent[]>([]);
   const [connections, setConnections] = useState<NetlistConnection[]>([]);
+  const [isDirectionSwapped, setIsDirectionSwapped] = useState(false);
   
   const { file1, file2, result } = comparisonFiles;
+  
+  // Get effective file order based on direction
+  const getEffectiveFiles = () => {
+    if (isDirectionSwapped) {
+      return {
+        oldFile: file2,
+        newFile: file1,
+        displayFile1: file2,
+        displayFile2: file1
+      };
+    }
+    return {
+      oldFile: file1,
+      newFile: file2,
+      displayFile1: file1,
+      displayFile2: file2
+    };
+  };
+  
+  const { displayFile1, displayFile2 } = getEffectiveFiles();
+  
+  const handleSwapDirection = () => {
+    setIsDirectionSwapped(!isDirectionSwapped);
+  };
+  
+  const handleCompare = () => {
+    if (!file1 || !file2) return;
+    
+    const { oldFile, newFile } = getEffectiveFiles();
+    if (isDirectionSwapped) {
+      onCompare({ oldFile, newFile });
+    } else {
+      onCompare();
+    }
+  };
 
   useEffect(() => {
     if (file1 && file2) {
@@ -296,26 +332,41 @@ const SchematicComparison = ({ comparisonFiles, onCompare }: SchematicComparison
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">      <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Schematic Comparison</h3>
-        <Button
-          onClick={onCompare}
-          disabled={!file1 || !file2}
-          className="flex items-center space-x-2"
-        >
-          <ArrowLeftRight className="h-4 w-4 mr-2" />
-          Compare Files
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSwapDirection}
+            disabled={!file1 || !file2}
+            className="flex items-center space-x-1"
+          >
+            <ArrowRightLeft className="h-4 w-4" />
+            <span className="text-xs">Swap Direction</span>
+          </Button>
+          <Button
+            onClick={handleCompare}
+            disabled={!file1 || !file2}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeftRight className="h-4 w-4 mr-2" />
+            Compare Files
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">File 1:</p>
+      <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">
+              File 1 {isDirectionSwapped && <span className="text-xs text-muted-foreground">(swapped)</span>}:
+            </p>
+            <span className="text-xs text-muted-foreground">Old/Base</span>
+          </div>
           <div className="bg-background p-3 rounded border min-h-20 flex items-center justify-center">
-            {file1 ? (
+            {displayFile1 ? (
               <div>
-                <p className="truncate font-medium">{file1.name}</p>
+                <p className="truncate font-medium">{displayFile1.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {fileType ? (fileType === "bom" ? "BOM File" : "Netlist File") : "Unknown Type"}
                 </p>
@@ -324,14 +375,17 @@ const SchematicComparison = ({ comparisonFiles, onCompare }: SchematicComparison
               <p className="text-muted-foreground text-sm">Select first file</p>
             )}
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">File 2:</p>
+        </div>        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">
+              File 2 {isDirectionSwapped && <span className="text-xs text-muted-foreground">(swapped)</span>}:
+            </p>
+            <span className="text-xs text-muted-foreground">New/Modified</span>
+          </div>
           <div className="bg-background p-3 rounded border min-h-20 flex items-center justify-center">
-            {file2 ? (
+            {displayFile2 ? (
               <div>
-                <p className="truncate font-medium">{file2.name}</p>
+                <p className="truncate font-medium">{displayFile2.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {fileType ? (fileType === "bom" ? "BOM File" : "Netlist File") : "Unknown Type"}
                 </p>
@@ -406,6 +460,17 @@ const SchematicComparison = ({ comparisonFiles, onCompare }: SchematicComparison
               {renderTextComparison()}
             </TabsContent>
           </Tabs>
+
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSwapDirection}
+              variant="outline"
+              className="flex items-center space-x-2"
+            >
+              <ArrowRightLeft className="h-4 w-4" />
+              <span className="text-sm">Swap Direction</span>
+            </Button>
+          </div>
         </div>
       )}
     </div>

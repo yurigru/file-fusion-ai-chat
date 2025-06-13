@@ -123,8 +123,7 @@ const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile, onPreviewF
             >
               <div className="flex items-center space-x-3 flex-1 min-w-0">
                 {getFileIcon(file.type)}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                <div className="flex-1 min-w-0">                  <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium truncate">{file.name}</p>
                     <Badge className={getFileTypeColor(file.name)}>
                       {getFileExtension(file.name).toUpperCase()}
@@ -135,13 +134,7 @@ const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile, onPreviewF
                         Previewing
                       </Badge>
                     )}
-                    {isSelected(file) && (
-                      <Badge variant="default" className="bg-blue-600">
-                        <Check className="w-3 h-3 mr-1" />
-                        Selected
-                      </Badge>
-                    )}
-                  </div>                  <p className="text-xs text-muted-foreground">
+                  </div><p className="text-xs text-muted-foreground">
                     {formatFileSize(file.size)} • Uploaded {new Date(file.lastModified).toLocaleString()}
                   </p>
                 </div>

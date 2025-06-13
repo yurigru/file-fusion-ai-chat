@@ -30,35 +30,28 @@ const Index = () => {
   const [tablePreview, setTablePreview] = useState<any[] | null>(null);
   const [isComparing, setIsComparing] = useState(false); // Add isComparing state
 
+  // Auto-select first two files when files are uploaded
   useEffect(() => {
-    // When two files are selected, automatically set them as comparison files
-    if (selectedFiles.length === 2) {
-      setComparisonFiles({
-        file1: selectedFiles[0],
-        file2: selectedFiles[1],
-        result: null,
-      });
+    if (files.length >= 2 && selectedFiles.length === 0) {
+      // Automatically select the first two files
+      const firstTwoFiles = files.slice(0, 2);
+      setSelectedFiles(firstTwoFiles);
+      console.log("Auto-selected first two files:", firstTwoFiles.map(f => f.name));
       
-      // Try to detect the file type
-      detectFileType(selectedFiles[0], selectedFiles[1]);
-    } else if (selectedFiles.length < 2) {
-      setComparisonFiles({
-        file1: selectedFiles[0] || null,
-        file2: null,
-        result: null,
-      });
-      setFileType(null);
+      // Switch to compare tab when auto-selecting
+      setActiveTab("compare");
     }
-  }, [selectedFiles]);
+  }, [files]);
 
-  // Add effect to update table preview when a single file is selected
+  // Update table preview based on previewed file
   useEffect(() => {
-    if (selectedFiles.length === 1) {
-      const file = selectedFiles[0];
-      const ext = file.name.split('.').pop()?.toLowerCase() || '';
-      if (ext === "xml") {        try {
+    if (previewedFile) {
+      const ext = previewedFile.name.split('.').pop()?.toLowerCase() || '';
+      
+      if (ext === "xml") {
+        try {
           const parser = new XMLParser();
-          const result = parser.parse(file.content);
+          const result = parser.parse(previewedFile.content);
           // Support both <BOM> and <SHOWSRVCALLS> roots
           let details = result?.BOM?.DETAILS || result?.SHOWSRVCALLS?.DETAILS;
           let records = details?.RECORD;
@@ -68,8 +61,8 @@ const Index = () => {
           }
           if (!records) records = [];
           const recordArray = Array.isArray(records) ? records : [records];
-          // Filter out empty objects
-          const rows = recordArray.filter(r => r && typeof r === 'object').map((rec: any) => ({
+          // Filter out empty objects and show first 50 rows for preview
+          const rows = recordArray.filter(r => r && typeof r === 'object').slice(0, 50).map((rec: any) => ({
             NUMBER: rec["NUMBER"] || "",
             PartNumber: rec["PART-NUM"] || "",
             QTY: rec["QTY"] || "",
@@ -81,13 +74,14 @@ const Index = () => {
           }));
           setTablePreview(rows);
         } catch (err) {
+          console.error("Error parsing XML for preview:", err);
           setTablePreview([]);
         }
       } else if (ext === "csv") {
-        const data = file.content.split('\n').map(row => row.split(','));
+        const data = previewedFile.content.split('\n').slice(0, 50).map(row => row.split(','));
         setTablePreview(data);
       } else if (ext === "net") {
-        const data = file.content.split('\n').map(row => [row]);
+        const data = previewedFile.content.split('\n').slice(0, 50).map(row => [row]);
         setTablePreview(data);
       } else {
         setTablePreview([]);
@@ -95,7 +89,30 @@ const Index = () => {
     } else {
       setTablePreview(null);
     }
-  }, [selectedFiles]);
+  }, [previewedFile]);
+  useEffect(() => {
+    // When two files are selected, automatically set them as comparison files
+    if (selectedFiles.length === 2) {
+      setComparisonFiles({
+        file1: selectedFiles[0],
+        file2: selectedFiles[1],
+        result: null,
+      });
+      
+      // Try to detect the file type
+      detectFileType(selectedFiles[0], selectedFiles[1]);
+      
+      // Auto-switch to compare tab when 2 files are selected
+      setActiveTab("compare");
+    } else if (selectedFiles.length < 2) {
+      setComparisonFiles({
+        file1: selectedFiles[0] || null,
+        file2: null,
+        result: null,
+      });
+      setFileType(null);
+    }  }, [selectedFiles]);
+
   const detectFileType = (file1: UploadedFile, file2: UploadedFile) => {
     const determineType = (file: UploadedFile): "bom" | "netlist" | null => {
       const fileName = file.name.toLowerCase();
@@ -154,7 +171,6 @@ const Index = () => {
     setFiles((prev) => [...prev, ...processedFiles]);
     setActiveTab("files");
   };
-
   const handleSelectFile = (file: UploadedFile) => {
     if (selectedFiles.some((f) => f.id === file.id)) {
       // Deselect the file
@@ -171,6 +187,11 @@ const Index = () => {
         setSelectedFiles(newSelectedFiles);
       }
     }
+  };
+
+  const handlePreviewFile = (file: UploadedFile) => {
+    console.log("Previewing file:", file.name);
+    setPreviewedFile(prevFile => prevFile?.id === file.id ? null : file);
   };
 
   const handleRemoveFile = (fileId: string) => {
@@ -193,8 +214,7 @@ const Index = () => {
       });
     }
   };
-
-  const handleCompare = async () => {
+  const handleCompare = async (swappedFiles?: { oldFile: UploadedFile; newFile: UploadedFile }) => {
     if (!comparisonFiles.file1 || !comparisonFiles.file2) {
       toast.error("Please select two files to compare");
       return;
@@ -202,26 +222,30 @@ const Index = () => {
 
     setIsComparing(true); // Set loading state
 
+    // Determine which files to use for comparison
+    const oldFileContent = swappedFiles ? swappedFiles.oldFile : comparisonFiles.file1;
+    const newFileContent = swappedFiles ? swappedFiles.newFile : comparisonFiles.file2;
+
     // If both files are .xml, use FastAPI for BOM comparison
     if (
-      comparisonFiles.file1.name.toLowerCase().endsWith('.xml') &&
-      comparisonFiles.file2.name.toLowerCase().endsWith('.xml')
+      oldFileContent.name.toLowerCase().endsWith('.xml') &&
+      newFileContent.name.toLowerCase().endsWith('.xml')
     ) {
       const oldFile = new File([
-        comparisonFiles.file1.content
-      ], comparisonFiles.file1.name, {
-        type: comparisonFiles.file1.type,
-        lastModified: comparisonFiles.file1.lastModified,
+        oldFileContent.content
+      ], oldFileContent.name, {
+        type: oldFileContent.type,
+        lastModified: oldFileContent.lastModified,
       });
       const newFile = new File([
-        comparisonFiles.file2.content
-      ], comparisonFiles.file2.name, {
-        type: comparisonFiles.file2.type,
-        lastModified: comparisonFiles.file2.lastModified,
+        newFileContent.content
+      ], newFileContent.name, {
+        type: newFileContent.type,
+        lastModified: newFileContent.lastModified,
       });
       const formData = new FormData();
       formData.append("old_file", oldFile);
-      formData.append("new_file", newFile);      try {
+      formData.append("new_file", newFile);try {
         // Use relative URL for proxy to work in all environments
         const response = await fetch("/compare-bom", {
           method: "POST",
@@ -355,12 +379,10 @@ const Index = () => {
         setIsComparing(false); // Reset loading state
       }
       return;
-    }
-
-    // Fallback: mock comparison for UI prototype
+    }    // Fallback: mock comparison for UI prototype
     const simulateComparison = (): ComparisonResult => {
-      const file1Lines = comparisonFiles.file1?.content.split("\n") || [];
-      const file2Lines = comparisonFiles.file2?.content.split("\n") || [];
+      const file1Lines = oldFileContent?.content.split("\n") || [];
+      const file2Lines = newFileContent?.content.split("\n") || [];
       const added: string[] = [];
       const deleted: string[] = [];
       const changed: { line: number; original: string; modified: string }[] = [];
@@ -397,21 +419,19 @@ const Index = () => {
     setComparisonFiles({
       ...comparisonFiles,
       result,
-    });
-    if (fileType === "bom") {
-      generateMockComponents(result);
+    });    if (fileType === "bom") {
+      generateMockComponents(result, oldFileContent);
     } else if (fileType === "netlist") {
-      generateMockConnections(result);
+      generateMockConnections(result, oldFileContent);
     }
     setActiveTab("compare");
     toast.success("Comparison completed");
   };
-
-  const generateMockComponents = (result: ComparisonResult) => {
-    if (!comparisonFiles.file1) return;
+  const generateMockComponents = (result: ComparisonResult, sourceFile: UploadedFile) => {
+    if (!sourceFile) return;
     
     const mockComponents: ElectronicComponent[] = [];
-    const lines = comparisonFiles.file1.content.split('\n').filter(line => line.trim().length > 0);
+    const lines = sourceFile.content.split('\n').filter(line => line.trim().length > 0);
     
     lines.slice(0, 10).forEach((line, index) => {
       const fields = line.split(',');
@@ -430,12 +450,11 @@ const Index = () => {
     
     setComponents(mockComponents);
   };
-
-  const generateMockConnections = (result: ComparisonResult) => {
-    if (!comparisonFiles.file1) return;
+  const generateMockConnections = (result: ComparisonResult, sourceFile: UploadedFile) => {
+    if (!sourceFile) return;
     
     const mockConnections: NetlistConnection[] = [];
-    const lines = comparisonFiles.file1.content.split('\n').filter(line => line.trim().length > 0);
+    const lines = sourceFile.content.split('\n').filter(line => line.trim().length > 0);
     
     lines.slice(0, 10).forEach((line, index) => {
       const fields = line.split(' ').filter(f => f.trim().length > 0);
@@ -483,23 +502,29 @@ const Index = () => {
 
               <TabsContent value="upload" className="space-y-4">
                 <FileUploader onFilesUploaded={handleFilesUploaded} />
-              </TabsContent>
-
-              <TabsContent value="files" className="space-y-4">
+              </TabsContent>              <TabsContent value="files" className="space-y-4">
                 <FileList
                   files={files}
                   selectedFiles={selectedFiles}
                   onSelectFile={handleSelectFile}
                   onRemoveFile={handleRemoveFile}
+                  onPreviewFile={handlePreviewFile}
+                  previewedFile={previewedFile}
                 />
-                {/* Show table preview if a single file is selected */}
-                {tablePreview && (
+                {/* Show table preview when a file is previewed */}
+                {tablePreview && previewedFile && (
                   <div className="mt-6">
-                    <h2 className="text-lg font-semibold mb-2">File Table Preview</h2>
+                    <h2 className="text-lg font-semibold mb-2">
+                      File Preview: {previewedFile.name}
+                    </h2>
+                    <div className="text-sm text-gray-600 mb-2">
+                      Showing first {Math.min(50, tablePreview.length)} rows
+                      {tablePreview.length >= 50 && " (truncated for preview)"}
+                    </div>
                     <FileTable data={tablePreview} />
                   </div>
                 )}
-              </TabsContent>              <TabsContent value="compare" className="space-y-4">
+              </TabsContent><TabsContent value="compare" className="space-y-4">
                 <FileComparison 
                   comparisonFiles={comparisonFiles} 
                   onCompare={handleCompare} 
@@ -520,11 +545,9 @@ const Index = () => {
                 )}
               </TabsContent>
             </Tabs>
-          </div>
-
-          <div className="h-[600px]">
+          </div>          <div className="h-[600px]">
             <AIChat
-              selectedFile={selectedFiles.length === 1 ? selectedFiles[0] : null}
+              selectedFile={previewedFile || (selectedFiles.length === 1 ? selectedFiles[0] : null)}
               comparisonResult={comparisonFiles.result}
               comparedFiles={{
                 file1: comparisonFiles.file1,
