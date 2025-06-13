@@ -1,4 +1,3 @@
-
 export interface UploadedFile {
   id: string;
   name: string;
@@ -77,7 +76,22 @@ export type OllamaModel =
   | "mixtral"
   | "phi3"
   | "codellama"
-  | "gemma";
+  | "gemma"
+  | string; // Allow any string for custom models
+
+export interface OllamaModelInfo {
+  name: string;
+  size: number;
+  digest: string;
+  details: {
+    format: string;
+    family: string;
+    families: string[];
+    parameter_size: string;
+    quantization_level: string;
+  };
+  modified_at: string;
+}
 
 export interface ChatMessage {
   id: string;
@@ -111,4 +125,11 @@ export interface ServerConfig {
   modelName: string;
   mcpConfig?: MCPServerConfig;
   ollamaUrl?: string;
+}
+
+export interface ModelSelectorProps {
+  selectedModel: string;
+  onModelChange: (model: string) => void;
+  serverConfig: ServerConfig;
+  onServerConfigChange: (config: ServerConfig) => void;
 }

@@ -29,7 +29,6 @@ const Index = () => {
   const [fileType, setFileType] = useState<"bom" | "netlist" | null>(null);
   const [tablePreview, setTablePreview] = useState<any[] | null>(null);
   const [isComparing, setIsComparing] = useState(false); // Add isComparing state
-
   // Auto-select first two files when files are uploaded
   useEffect(() => {
     if (files.length >= 2 && selectedFiles.length === 0) {
@@ -37,8 +36,7 @@ const Index = () => {
       const firstTwoFiles = files.slice(0, 2);
       setSelectedFiles(firstTwoFiles);
       console.log("Auto-selected first two files:", firstTwoFiles.map(f => f.name));
-      
-      // Switch to compare tab when auto-selecting
+        // Switch to compare tab when auto-selecting files
       setActiveTab("compare");
     }
   }, [files]);
@@ -166,9 +164,8 @@ const Index = () => {
         ...file,
         fileType
       };
-    });
-    
-    setFiles((prev) => [...prev, ...processedFiles]);
+    });    setFiles((prev) => [...prev, ...processedFiles]);
+    // Switch to files tab after upload
     setActiveTab("files");
   };
   const handleSelectFile = (file: UploadedFile) => {
@@ -256,8 +253,7 @@ const Index = () => {
           const errorData = await response.json();
           throw new Error(errorData.detail || "BOM comparison failed");
         }
-          const data = await response.json();
-        
+          const data = await response.json();        
         console.log("Backend response received:", data);
         console.log("Backend response keys:", Object.keys(data));
         
@@ -272,6 +268,7 @@ const Index = () => {
         if (data.statistics) {
           toast.success(`Comparison completed: ${data.statistics.total_changes} total changes found`);
         }// Map the backend response to the frontend component data structure
+        // Keep the original field names (PACKAGE, OPT) so BOMCompare can access them directly
         const addedComponents = (data.added || []).map(comp => ({
           id: comp.REFDES || "",
           reference: comp.REFDES || "",
@@ -280,7 +277,16 @@ const Index = () => {
           description: comp.DESCRIPTION || "",
           manufacturer: comp.PARTNAME || "",
           footprint: comp.PACKAGE || "",
-          quantity: parseInt(comp.QTY || "0")
+          quantity: parseInt(comp.QTY || "0"),
+          // Keep original field names for BOMCompare
+          REFDES: comp.REFDES || "",
+          QTY: comp.QTY || "",
+          "PartNumber": comp.PartNumber || "",
+          "PART-NUM": comp["PART-NUM"] || "",
+          DESCRIPTION: comp.DESCRIPTION || "",
+          PARTNAME: comp.PARTNAME || "",
+          PACKAGE: comp.PACKAGE || "",
+          OPT: comp.OPT || ""
         }));
         
         const deletedComponents = (data.removed || []).map(comp => ({
@@ -291,14 +297,22 @@ const Index = () => {
           description: comp.DESCRIPTION || "",
           manufacturer: comp.PARTNAME || "",
           footprint: comp.PACKAGE || "",
-          quantity: parseInt(comp.QTY || "0")
-        }));        const changedComponents = (data.changed || []).map(chg => {
+          quantity: parseInt(comp.QTY || "0"),
+          // Keep original field names for BOMCompare
+          REFDES: comp.REFDES || "",
+          QTY: comp.QTY || "",
+          "PartNumber": comp.PartNumber || "",
+          "PART-NUM": comp["PART-NUM"] || "",
+          DESCRIPTION: comp.DESCRIPTION || "",
+          PARTNAME: comp.PARTNAME || "",
+          PACKAGE: comp.PACKAGE || "",
+          OPT: comp.OPT || ""
+        }));const changedComponents = (data.changed || []).map(chg => {
           // Ensure we're accessing the data with proper format checking
           if (!chg || !chg.Original || !chg.Modified) {
             return {
               id: chg?.Reference || "unknown",
-              reference: chg?.Reference || "unknown",
-              original: {
+              reference: chg?.Reference || "unknown",              original: {
                 partNumber: "",
                 quantity: 0,
                 value: "",
@@ -306,6 +320,15 @@ const Index = () => {
                 footprint: "",
                 description: "",
                 manufacturer: "",
+                // Keep original field names for BOMCompare
+                REFDES: "",
+                QTY: "",
+                "PartNumber": "",
+                "PART-NUM": "",
+                DESCRIPTION: "",
+                PARTNAME: "",
+                PACKAGE: "",
+                OPT: ""
               },
               modified: {
                 partNumber: "",
@@ -315,12 +338,20 @@ const Index = () => {
                 footprint: "",
                 description: "",
                 manufacturer: "",
+                // Keep original field names for BOMCompare
+                REFDES: "",
+                QTY: "",
+                "PartNumber": "",
+                "PART-NUM": "",
+                DESCRIPTION: "",
+                PARTNAME: "",
+                PACKAGE: "",
+                OPT: ""
               }
             };
           }            const mappedComponent = {
             id: chg.Reference,
-            reference: chg.Reference,
-            original: {
+            reference: chg.Reference,            original: {
               partNumber: chg.Original.PartNumber || "",
               quantity: parseInt(chg.Original.QTY || "0"),
               value: chg.Original.QTY || "",
@@ -328,13 +359,31 @@ const Index = () => {
               footprint: chg.Original.PACKAGE || "",
               description: chg.Original.DESCRIPTION || "",
               manufacturer: chg.Original.PARTNAME || "",
-            },            modified: {
+              // Keep original field names for BOMCompare
+              REFDES: chg.Original.REFDES || chg.Reference,
+              QTY: chg.Original.QTY || "",
+              "PartNumber": chg.Original.PartNumber || "",
+              "PART-NUM": chg.Original["PART-NUM"] || "",
+              DESCRIPTION: chg.Original.DESCRIPTION || "",
+              PARTNAME: chg.Original.PARTNAME || "",
+              PACKAGE: chg.Original.PACKAGE || "",
+              OPT: chg.Original.OPT || ""            },modified: {
               partNumber: chg.Modified.PartNumber || "",
-              quantity: parseInt(chg.Modified.QTY || "0"),              value: chg.Modified.QTY || "",
+              quantity: parseInt(chg.Modified.QTY || "0"),
+              value: chg.Modified.QTY || "",
               reference: chg.Modified.REFDES || chg.Reference,
               footprint: chg.Modified.PACKAGE || "",
               description: chg.Modified.DESCRIPTION || "",
               manufacturer: chg.Modified.PARTNAME || "",
+              // Keep original field names for BOMCompare
+              REFDES: chg.Modified.REFDES || chg.Reference,
+              QTY: chg.Modified.QTY || "",
+              "PartNumber": chg.Modified.PartNumber || "",
+              "PART-NUM": chg.Modified["PART-NUM"] || "",
+              DESCRIPTION: chg.Modified.DESCRIPTION || "",
+              PARTNAME: chg.Modified.PARTNAME || "",
+              PACKAGE: chg.Modified.PACKAGE || "",
+              OPT: chg.Modified.OPT || ""
             },
           };
           return mappedComponent;
@@ -350,8 +399,7 @@ const Index = () => {
           // Add validation warnings and statistics
           validationWarnings: data.validation_warnings || [],
           statistics: data.statistics || {}
-        };
-        
+        };        
         console.log("Final result being set:", finalResult);
         console.log("Final result data counts:", {
           addedComponents: finalResult.addedComponents.length,
@@ -468,11 +516,9 @@ const Index = () => {
       }
     });
     
-    setConnections(mockConnections);  };
-
-  return (
-    <div className="container mx-auto py-8 max-w-6xl">
-      <div className="space-y-8">        <div>
+    setConnections(mockConnections);  };  return (
+    <div className="container mx-auto py-8">
+      <div className="space-y-8"><div>
           <h1 className="text-3xl font-bold tracking-tight">Electronic Schematic Analyzer</h1>
           <p className="text-muted-foreground mt-2">
             Upload, analyze, and compare BOM and netlist files with AI assistance
@@ -486,6 +532,7 @@ const Index = () => {
                   <TabsTrigger value="upload">Upload</TabsTrigger>
                   <TabsTrigger value="files">Files ({files.length})</TabsTrigger>
                   <TabsTrigger value="compare">Compare</TabsTrigger>
+                  <TabsTrigger value="ai-assistant">AI Assistant</TabsTrigger>
                 </TabsList>
                 
                 <ExportOptions 
@@ -541,19 +588,21 @@ const Index = () => {
                   </div>
                 )}
                 {fileType === "netlist" && (
-                  <SchematicComparison comparisonFiles={comparisonFiles} onCompare={handleCompare} />
-                )}
+                  <SchematicComparison comparisonFiles={comparisonFiles} onCompare={handleCompare} />                )}
               </TabsContent>
+
+              <TabsContent value="ai-assistant" className="space-y-4">
+                <div className="h-[600px]">
+                  <AIChat
+                    selectedFile={previewedFile || (selectedFiles.length === 1 ? selectedFiles[0] : null)}
+                    comparisonResult={comparisonFiles.result}
+                    comparedFiles={{
+                      file1: comparisonFiles.file1,
+                      file2: comparisonFiles.file2
+                    }}
+                  />
+                </div>              </TabsContent>
             </Tabs>
-          </div>          <div className="h-[600px]">
-            <AIChat
-              selectedFile={previewedFile || (selectedFiles.length === 1 ? selectedFiles[0] : null)}
-              comparisonResult={comparisonFiles.result}
-              comparedFiles={{
-                file1: comparisonFiles.file1,
-                file2: comparisonFiles.file2
-              }}
-            />
           </div>
         </div>
       </div>
