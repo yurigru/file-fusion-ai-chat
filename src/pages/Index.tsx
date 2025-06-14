@@ -8,7 +8,6 @@ import AIChat from "@/components/AIChat";
 import ExportOptions from "@/components/ExportOptions";
 import FileTable from "@/components/FileTable";
 import BOMCompare from "@/components/BOMCompare";
-import Settings from "@/components/Settings";
 
 import { UploadedFile, ComparisonFiles, ComparisonResult, ElectronicComponent, NetlistConnection } from "@/types";
 import { toast } from "@/components/ui/sonner";
@@ -626,7 +625,6 @@ const Index = () => {
                   <TabsTrigger value="files">Files ({files.length})</TabsTrigger>
                   <TabsTrigger value="compare">Compare</TabsTrigger>
                   <TabsTrigger value="ai-assistant">AI Assistant</TabsTrigger>
-                  <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
                 
                 <ExportOptions 
@@ -683,9 +681,7 @@ const Index = () => {
                 )}
                 {fileType === "netlist" && (
                   <SchematicComparison comparisonFiles={comparisonFiles} onCompare={handleCompare} />                )}
-              </TabsContent>
-
-              <TabsContent value="ai-assistant" className="space-y-4">
+              </TabsContent>              <TabsContent value="ai-assistant" className="space-y-4">
                 <div className="h-[600px]">
                   <AIChat
                     selectedFile={previewedFile || (selectedFiles.length === 1 ? selectedFiles[0] : null)}
@@ -695,10 +691,6 @@ const Index = () => {
                       file2: comparisonFiles.file2
                     }}                  />
                 </div>              </TabsContent>
-
-              <TabsContent value="settings" className="space-y-4">
-                <Settings />
-              </TabsContent>
             </Tabs>
           </div>
         </div>

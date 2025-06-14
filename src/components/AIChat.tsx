@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, RefreshCw, Server, Settings, Database, Upload, Info, Search, Trash2, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { Send, Bot, User, RefreshCw, Server, Settings, Database, Upload, Info, Search, Trash2, AlertCircle, CheckCircle, XCircle, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,6 +13,7 @@ import { OllamaModel, ChatMessage, ComparisonResult, UploadedFile, ServerConfig,
 import { toast } from "@/components/ui/sonner";
 import { ChatService } from "@/services/chatService";
 import { ragService, RAGResult } from "@/services/ragService";
+import type { RAGStats, RAGStatus } from "@/services/ragService";
 
 interface AIChatProps {
   selectedFile: UploadedFile | null;
@@ -34,7 +35,15 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);  const [useRAG, setUseRAG] = useState(true);
   const [ragResults, setRagResults] = useState<RAGResult[]>([]);
-  const [showRagResults, setShowRagResults] = useState(false);  const [isUploadingToKB, setIsUploadingToKB] = useState(false);
+  const [showRagResults, setShowRagResults] = useState(false);
+  const [isUploadingToKB, setIsUploadingToKB] = useState(false);
+  
+  // RAG management states
+  const [ragStats, setRagStats] = useState<RAGStats | null>(null);
+  const [ragStatus, setRagStatus] = useState<RAGStatus | null>(null);
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
+  const [isClearingKB, setIsClearingKB] = useState(false);
+  const [showRagDetails, setShowRagDetails] = useState(false);
   const [serverConfig, setServerConfig] = useState<ServerConfig>({
     type: "ollama",
     modelName: "llama3.2",
@@ -76,6 +85,13 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);  useEffect(() => {
+    // Load RAG stats when settings panel is opened
+    if (showSettings && !ragStats) {
+      loadRagStats();
+    }
+  }, [showSettings]);
+
+  useEffect(() => {
     // Add a system message when files are selected or compared
     if (selectedFile || (comparedFiles.file1 && comparedFiles.file2)) {
       let systemMessage = "";
@@ -119,6 +135,68 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
       toast.error(`Failed to upload: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsUploadingToKB(false);    }  };
+  // RAG Management Functions
+  const loadRagStats = async () => {
+    try {
+      const status = await ragService.getRAGStatus();
+      // Convert RAGStatus to RAGStats format
+      const stats = {
+        components: status.database.components,
+        patterns: status.database.patterns,
+        total: status.database.total_items,
+        status: status.status
+      };
+      setRagStats(stats);
+    } catch (error) {
+      console.error("Failed to load RAG stats:", error);
+    }
+  };
+
+  const loadRagStatus = async () => {
+    setIsRefreshingStatus(true);
+    try {
+      const status = await ragService.getRAGStatus();
+      setRagStatus(status);
+    } catch (error) {
+      console.error("Failed to load RAG status:", error);
+      toast.error("Failed to load RAG status");
+    } finally {
+      setIsRefreshingStatus(false);
+    }
+  };
+
+  const clearKnowledgeBase = async () => {
+    if (!confirm("Are you sure you want to clear ALL data from the knowledge base? This action cannot be undone.")) {
+      return;
+    }
+
+    setIsClearingKB(true);
+    try {
+      const result = await ragService.clearKnowledgeBase();
+      toast.success(`${result.message}`);
+      await loadRagStats(); // Refresh stats
+      await loadRagStatus(); // Refresh status
+    } catch (error) {
+      console.error("Failed to clear knowledge base:", error);
+      toast.error(`Failed to clear knowledge base: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsClearingKB(false);
+    }
+  };
+
+  const refreshRAGStatus = async () => {
+    await loadRagStatus();
+    await loadRagStats();
+  };
+
+  const toggleRagDetails = async () => {
+    if (!showRagDetails) {
+      // Load data when showing details
+      await loadRagStats();
+      await loadRagStatus();
+    }
+    setShowRagDetails(!showRagDetails);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -364,8 +442,7 @@ This would be processed by the MCP server with the available tools.`;
               </TooltipProvider>
             </div>
           </div>
-          
-          {showSettings && (
+            {showSettings && (
             <div className="mt-2 space-y-3">
               <ModelSelector 
                 selectedModel={model} 
@@ -375,17 +452,193 @@ This would be processed by the MCP server with the available tools.`;
               />
               
               <Separator />
+                {/* Application Settings Section */}
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <span className="text-sm font-medium flex items-center">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Application Settings
+                  </span>
+                </div>
+                
+                <div className="space-y-3 p-3 border rounded-lg bg-card">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">General Configuration</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Application-wide settings and configuration options.
+                    </p>
+                    
+                    <div className="grid grid-cols-1 gap-2 text-xs">
+                      <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                        <span className="font-medium">Theme Mode</span>
+                        <span className="text-muted-foreground">System Default</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                        <span className="font-medium">File Auto-Detection</span>
+                        <span className="text-green-600 font-medium">✓ Enabled</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                        <span className="font-medium">Export Formats</span>
+                        <span className="text-muted-foreground">CSV, JSON, Excel</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                        <span className="font-medium">Max File Size</span>
+                        <span className="text-muted-foreground">50 MB</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                        <span className="font-medium">Auto-Compare</span>
+                        <span className="text-green-600 font-medium">✓ Enabled</span>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950/30 rounded text-xs">
+                      <div className="font-medium text-blue-700 dark:text-blue-300 mb-1">💡 Quick Tip</div>
+                      <div className="text-blue-600 dark:text-blue-400">
+                        Upload BOMs to populate the Knowledge Base below for enhanced AI responses with component-specific information.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
-              <div className="space-y-2">
+              <Separator />
+              
+              {/* Enhanced RAG (Knowledge Base) Section */}
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">RAG (Knowledge Base)</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setUseRAG(!useRAG)}
-                  >
-                    {useRAG ? "Enabled" : "Disabled"}
-                  </Button>                </div>
+                  <span className="text-sm font-medium flex items-center">
+                    <Database className="h-4 w-4 mr-2" />
+                    RAG (Knowledge Base)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUseRAG(!useRAG)}
+                    >
+                      {useRAG ? "Enabled" : "Disabled"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleRagDetails}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      {showRagDetails ? "Hide" : "Show"} Details
+                    </Button>
+                  </div>
+                </div>                {/* RAG Quick Stats */}
+                {ragStats && (
+                  <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 rounded-lg text-xs">
+                    <div className="text-center">
+                      <div className="font-bold text-lg">{ragStats.total || 0}</div>
+                      <div className="text-muted-foreground">Total Items</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-lg">{ragStats.components || 0}</div>
+                      <div className="text-muted-foreground">Components</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-lg">{ragStats.patterns || 0}</div>
+                      <div className="text-muted-foreground">Patterns</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Detailed RAG Status */}
+                {showRagDetails && (
+                  <div className="space-y-3 p-3 border rounded-lg bg-card">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium">System Status</h4>
+                      <div className="flex items-center gap-2">
+                        {ragStatus && (
+                          <Badge 
+                            variant={ragStatus.status === 'operational' ? 'default' : 
+                                     ragStatus.status === 'degraded' ? 'secondary' : 'destructive'}
+                            className="text-xs"
+                          >
+                            {ragStatus.status || ragStatus.overall_status}
+                          </Badge>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={refreshRAGStatus}
+                          disabled={isRefreshingStatus}
+                        >
+                          {isRefreshingStatus ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>                    {ragStatus && (
+                      <div className="space-y-3 text-sm">
+                        {/* Database Status */}
+                        <div className="flex items-center justify-between p-2 bg-muted/20 rounded">
+                          <div className="flex items-center">
+                            {ragStatus.database.accessible ? (
+                              <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                            ) : (
+                              <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                            )}
+                            <span className="font-medium">Database</span>
+                          </div>
+                          <div className="text-right text-xs">
+                            <div>{ragStatus.database.accessible ? 'Connected' : 'Disconnected'}</div>
+                            <div className="text-muted-foreground">
+                              {ragStatus.database.type || 'memory'} • {ragStatus.database.total_items || 0} items
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Embedding Service Status */}
+                        <div className="flex items-center justify-between p-2 bg-muted/20 rounded">
+                          <div className="flex items-center">
+                            {ragStatus.embedding_service.accessible ? (
+                              <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                            ) : (
+                              <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                            )}
+                            <span className="font-medium">Embedding Service</span>
+                          </div>
+                          <div className="text-right text-xs">
+                            <div>{ragStatus.embedding_service.accessible ? 'Connected' : 'Disconnected'}</div>
+                            <div className="text-muted-foreground">
+                              {ragStatus.embedding_service.model}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="pt-2 space-y-2">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={clearKnowledgeBase}
+                        disabled={isClearingKB}
+                        className="w-full"
+                      >
+                        {isClearingKB ? (
+                          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3 mr-2" />
+                        )}
+                        Clear Knowledge Base
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Upload BOM files above to populate the knowledge base.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {serverConfig.type === "mcp" && getActiveTools().length > 0 && (
