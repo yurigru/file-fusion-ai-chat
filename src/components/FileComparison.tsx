@@ -9,13 +9,14 @@ interface FileComparisonProps {
   comparisonFiles: ComparisonFiles;
   onCompare: (swappedFiles?: { oldFile: UploadedFile; newFile: UploadedFile }) => void;
   showTabs?: boolean; // Add optional prop to control tab visibility
+  isComparing?: boolean; // Add loading state prop
 }
 
 interface BOMRow {
   [key: string]: string;
 }
 
-const FileComparison = ({ comparisonFiles, onCompare, showTabs = true }: FileComparisonProps) => {
+const FileComparison = ({ comparisonFiles, onCompare, showTabs = true, isComparing = false }: FileComparisonProps) => {
   const [activeTab, setActiveTab] = useState("all");
   const [visibleLines, setVisibleLines] = useState<string[]>([]);
   const [addedTable, setAddedTable] = useState<BOMRow[]>([]);
@@ -216,11 +217,20 @@ const FileComparison = ({ comparisonFiles, onCompare, showTabs = true }: FileCom
             <span className="text-xs">Swap Direction</span>
           </Button>          <Button
             onClick={handleCompare}
-            disabled={!file1 || !file2}
+            disabled={!file1 || !file2 || isComparing}
             className="flex items-center space-x-2"
           >
-            <ArrowLeftRight className="h-4 w-4 mr-2" />
-            Compare Files
+            {isComparing ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Comparing...
+              </>
+            ) : (
+              <>
+                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                Compare Files
+              </>
+            )}
           </Button>
         </div>
       </div>

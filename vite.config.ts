@@ -6,13 +6,22 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({  server: {
     host: "::",
-    port: 8080,
-    proxy: {
+    port: 8080,    proxy: {
       // Proxy API requests to FastAPI backend
       "/compare-bom": {
         target: "http://127.0.0.1:8000",
         changeOrigin: true,
         secure: false, // Allow self-signed certificates if using HTTPS
+      },
+      "/api": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/health": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+        secure: false,
       },
     },
   },

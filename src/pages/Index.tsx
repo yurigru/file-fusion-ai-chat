@@ -8,6 +8,7 @@ import AIChat from "@/components/AIChat";
 import ExportOptions from "@/components/ExportOptions";
 import FileTable from "@/components/FileTable";
 import BOMCompare from "@/components/BOMCompare";
+import Settings from "@/components/Settings";
 
 import { UploadedFile, ComparisonFiles, ComparisonResult, ElectronicComponent, NetlistConnection } from "@/types";
 import { toast } from "@/components/ui/sonner";
@@ -158,16 +159,74 @@ const Index = () => {
         fileType = "bom";
       } else if (fileName.includes("net") || fileName.endsWith(".net") || fileName.endsWith(".netlist")) {
         fileType = "netlist";
+      } else if (fileName.endsWith(".xml")) {
+        // For XML files, assume they're BOMs unless proven otherwise
+        fileType = "bom";
       }
       
       return {
         ...file,
         fileType
       };
-    });    setFiles((prev) => [...prev, ...processedFiles]);
+    });
+
+    setFiles((prev) => [...prev, ...processedFiles]);
+    
+    // Automatically upload XML BOM files to RAG knowledge base
+    uploadXMLFilesToRAG(processedFiles);
+    
     // Switch to files tab after upload
     setActiveTab("files");
   };
+
+  const uploadXMLFilesToRAG = async (uploadedFiles: UploadedFile[]) => {
+    // Filter XML files that are likely BOMs
+    const xmlBomFiles = uploadedFiles.filter(file => 
+      file.name.toLowerCase().endsWith('.xml') && 
+      file.fileType === 'bom'
+    );
+
+    if (xmlBomFiles.length === 0) return;
+
+    console.log(`Uploading ${xmlBomFiles.length} XML BOM files to RAG knowledge base...`);
+
+    for (const file of xmlBomFiles) {
+      try {
+        // Convert UploadedFile back to File object for RAG service
+        const blob = new Blob([file.content], { type: file.type });
+        const ragFile = new File([blob], file.name, {
+          type: file.type,
+          lastModified: file.lastModified,
+        });
+
+        // Upload to RAG knowledge base with async embedding creation
+        const formData = new FormData();
+        formData.append('file', ragFile);
+        formData.append('source_name', file.name);
+        formData.append('create_embeddings', 'true'); // Enable async embedding creation
+
+        const response = await fetch('/api/rag/add-bom', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`✅ Uploaded ${file.name} to RAG: ${result.component_count} components`);
+          
+          // Show a subtle notification (not intrusive)
+          if (result.embeddings_status === 'processing') {
+            console.log(`🔄 Creating embeddings for ${file.name} in background...`);
+          }
+        } else {
+          console.warn(`⚠️ Failed to upload ${file.name} to RAG knowledge base`);
+        }
+      } catch (error) {
+        console.error(`❌ Error uploading ${file.name} to RAG:`, error);
+      }
+    }
+  };
+
   const handleSelectFile = (file: UploadedFile) => {
     if (selectedFiles.some((f) => f.id === file.id)) {
       // Deselect the file
@@ -242,20 +301,41 @@ const Index = () => {
       });
       const formData = new FormData();
       formData.append("old_file", oldFile);
-      formData.append("new_file", newFile);try {
+      formData.append("new_file", newFile);      try {
         // Use relative URL for proxy to work in all environments
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
         const response = await fetch("/compare-bom", {
           method: "POST",
           body: formData,
+          signal: controller.signal,
         });
         
+        clearTimeout(timeoutId);
+        
+        // Check if response is empty or has content
+        const responseText = await response.text();
+        console.log("Raw response:", responseText);
+        
         if (!response.ok) {
-          const errorData = await response.json();
+          let errorData;
+          try {
+            errorData = JSON.parse(responseText);
+          } catch {
+            errorData = { detail: `HTTP ${response.status}: ${responseText || 'Unknown error'}` };
+          }
           throw new Error(errorData.detail || "BOM comparison failed");
         }
-          const data = await response.json();        
+        
+        // Only parse JSON if we have content
+        if (!responseText.trim()) {
+          throw new Error("Empty response from backend");
+        }
+          const data = JSON.parse(responseText);
         console.log("Backend response received:", data);
         console.log("Backend response keys:", Object.keys(data));
+        console.log("Processing backend response...");
         
         // Show validation warnings if any
         if (data.validation_warnings && data.validation_warnings.length > 0) {
@@ -267,9 +347,32 @@ const Index = () => {
         // Show statistics
         if (data.statistics) {
           toast.success(`Comparison completed: ${data.statistics.total_changes} total changes found`);
-        }// Map the backend response to the frontend component data structure
+        }
+        
+        console.log("Starting data mapping...");        // Map the backend response to the frontend component data structure
         // Keep the original field names (PACKAGE, OPT) so BOMCompare can access them directly
+        console.log("Mapping added components...");
         const addedComponents = (data.added || []).map(comp => ({
+          id: comp.REFDES || "",
+          reference: comp.REFDES || "",
+          value: comp.QTY || "",
+          partNumber: comp.PartNumber || "",
+          description: comp.DESCRIPTION || "",
+          manufacturer: comp.PARTNAME || "",
+          footprint: comp.PACKAGE || "",
+          quantity: parseInt(comp.QTY || "0"),
+          // Keep original field names for BOMCompare
+          REFDES: comp.REFDES || "",
+          QTY: comp.QTY || "",
+          "PartNumber": comp.PartNumber || "",
+          "PART-NUM": comp["PART-NUM"] || "",
+          DESCRIPTION: comp.DESCRIPTION || "",
+          PARTNAME: comp.PARTNAME || "",
+          PACKAGE: comp.PACKAGE || "",
+          OPT: comp.OPT || ""        }));
+        
+        console.log("Mapping deleted components...");
+        const deletedComponents = (data.removed || []).map(comp => ({
           id: comp.REFDES || "",
           reference: comp.REFDES || "",
           value: comp.QTY || "",
@@ -289,25 +392,8 @@ const Index = () => {
           OPT: comp.OPT || ""
         }));
         
-        const deletedComponents = (data.removed || []).map(comp => ({
-          id: comp.REFDES || "",
-          reference: comp.REFDES || "",
-          value: comp.QTY || "",
-          partNumber: comp.PartNumber || "",
-          description: comp.DESCRIPTION || "",
-          manufacturer: comp.PARTNAME || "",
-          footprint: comp.PACKAGE || "",
-          quantity: parseInt(comp.QTY || "0"),
-          // Keep original field names for BOMCompare
-          REFDES: comp.REFDES || "",
-          QTY: comp.QTY || "",
-          "PartNumber": comp.PartNumber || "",
-          "PART-NUM": comp["PART-NUM"] || "",
-          DESCRIPTION: comp.DESCRIPTION || "",
-          PARTNAME: comp.PARTNAME || "",
-          PACKAGE: comp.PACKAGE || "",
-          OPT: comp.OPT || ""
-        }));const changedComponents = (data.changed || []).map(chg => {
+        console.log("Mapping changed components...");
+        const changedComponents = (data.changed || []).map(chg => {
           // Ensure we're accessing the data with proper format checking
           if (!chg || !chg.Original || !chg.Modified) {
             return {
@@ -385,9 +471,11 @@ const Index = () => {
               PACKAGE: chg.Modified.PACKAGE || "",
               OPT: chg.Modified.OPT || ""
             },
-          };
-          return mappedComponent;
-        });        const finalResult = {
+          };          return mappedComponent;
+        });
+        
+        console.log("Creating final result object...");
+        const finalResult = {
           // Use the component data for legacy fields to maintain compatibility
           added: addedComponents,
           deleted: deletedComponents,
@@ -401,28 +489,36 @@ const Index = () => {
           statistics: data.statistics || {}
         };        
         console.log("Final result being set:", finalResult);
-        console.log("Final result data counts:", {
-          addedComponents: finalResult.addedComponents.length,
+        console.log("Final result data counts:", {          addedComponents: finalResult.addedComponents.length,
           deletedComponents: finalResult.deletedComponents.length,
           changedComponents: finalResult.changedComponents.length
         });
         
+        console.log("Setting comparison result in state...");
         setComparisonFiles({
           ...comparisonFiles,
           result: finalResult,
         });
 
+        console.log("Switching to compare tab...");
         setActiveTab("compare");
-        
-        // Show success message with statistics
+          // Show success message with statistics
         const totalChanges = (data.statistics?.total_changes || 0);
         if (totalChanges === 0) {
           toast.success("Comparison completed - No differences found");
         } else {
           toast.success(`Comparison completed - ${totalChanges} changes found`);
         }
-      } catch (err: any) {
-        toast.error(`BOM comparison failed: ${err.message}`);
+        
+        console.log("Comparison completed successfully!");} catch (err: any) {
+        console.error("BOM comparison error:", err);
+        if (err.name === 'AbortError') {
+          toast.error("BOM comparison timed out. Please try again.");
+        } else if (err.message.includes('Failed to fetch')) {
+          toast.error("Network error: Unable to connect to backend. Please check if the backend is running.");
+        } else {
+          toast.error(`BOM comparison failed: ${err.message}`);
+        }
       } finally {
         setIsComparing(false); // Reset loading state
       }
@@ -461,9 +557,7 @@ const Index = () => {
         deletedComponents: [],
         changedComponents: []
       };
-    };
-
-    const result = simulateComparison();
+    };    const result = simulateComparison();
     setComparisonFiles({
       ...comparisonFiles,
       result,
@@ -473,6 +567,7 @@ const Index = () => {
       generateMockConnections(result, oldFileContent);
     }
     setActiveTab("compare");
+    setIsComparing(false); // Reset loading state
     toast.success("Comparison completed");
   };
   const generateMockComponents = (result: ComparisonResult, sourceFile: UploadedFile) => {
@@ -531,6 +626,7 @@ const Index = () => {
                   <TabsTrigger value="files">Files ({files.length})</TabsTrigger>
                   <TabsTrigger value="compare">Compare</TabsTrigger>
                   <TabsTrigger value="ai-assistant">AI Assistant</TabsTrigger>
+                  <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
                 
                 <ExportOptions 
@@ -569,11 +665,11 @@ const Index = () => {
                     <FileTable data={tablePreview} />
                   </div>
                 )}
-              </TabsContent><TabsContent value="compare" className="space-y-4">
-                <FileComparison 
+              </TabsContent><TabsContent value="compare" className="space-y-4">                <FileComparison 
                   comparisonFiles={comparisonFiles} 
                   onCompare={handleCompare} 
                   showTabs={fileType !== "bom"} 
+                  isComparing={isComparing}
                 />
                 {/* Debug info */}
                 <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
@@ -597,9 +693,12 @@ const Index = () => {
                     comparedFiles={{
                       file1: comparisonFiles.file1,
                       file2: comparisonFiles.file2
-                    }}
-                  />
+                    }}                  />
                 </div>              </TabsContent>
+
+              <TabsContent value="settings" className="space-y-4">
+                <Settings />
+              </TabsContent>
             </Tabs>
           </div>
         </div>

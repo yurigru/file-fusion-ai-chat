@@ -128,17 +128,10 @@ const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile, onPreviewF
                     <p className="font-medium truncate">{file.name}</p>
                     <Badge className={getFileTypeColor(file.name)}>
                       {getFileExtension(file.name).toUpperCase()}
-                    </Badge>
-                    {isPreviewed(file) && (
+                    </Badge>                    {isPreviewed(file) && (
                       <Badge variant="outline" className="text-blue-600 border-blue-300">
                         <Eye className="w-3 h-3 mr-1" />
                         Previewing
-                      </Badge>
-                    )}
-                    {isSelected(file) && (
-                      <Badge variant="default" className="bg-blue-600">
-                        <Check className="w-3 h-3 mr-1" />
-                        Selected
                       </Badge>
                     )}
                   </div>                  <p className="text-xs text-muted-foreground">
@@ -153,8 +146,7 @@ const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile, onPreviewF
                   onClick={(e) => handleSelectClick(e, file)}
                   disabled={!isSelected(file) && selectedFiles.length >= 2}
                   className="text-xs"
-                >
-                  {isSelected(file) ? (
+                >                  {isSelected(file) ? (
                     <>
                       <Check className="mr-1 h-3 w-3" /> Selected
                     </>

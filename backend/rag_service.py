@@ -23,18 +23,29 @@ class BOMRAGService:
                 anonymized_telemetry=False,
                 allow_reset=True
             )
-        )
+        )        # Create collections for different types of knowledge
+        # First, try to get existing collections
+        try:
+            self.components_collection = self.client.get_collection("bom_components")
+            logger.info("Using existing bom_components collection")
+        except Exception:
+            # Create new collection if it doesn't exist
+            self.components_collection = self.client.create_collection(
+                name="bom_components",
+                metadata={"description": "Individual BOM components with specifications"}
+            )
+            logger.info("Created new bom_components collection")
         
-        # Create collections for different types of knowledge
-        self.components_collection = self.client.get_or_create_collection(
-            name="bom_components",
-            metadata={"description": "Individual BOM components with specifications"}
-        )
-        
-        self.patterns_collection = self.client.get_or_create_collection(
-            name="design_patterns", 
-            metadata={"description": "PCB design patterns and best practices"}
-        )
+        try:
+            self.patterns_collection = self.client.get_collection("design_patterns")
+            logger.info("Using existing design_patterns collection")
+        except Exception:
+            # Create new collection if it doesn't exist
+            self.patterns_collection = self.client.create_collection(
+                name="design_patterns", 
+                metadata={"description": "PCB design patterns and best practices"}
+            )
+            logger.info("Created new design_patterns collection")
         
         logger.info("BOM RAG Service initialized with Chroma DB")
         
@@ -65,14 +76,22 @@ class BOMRAGService:
         try:
             root = ET.fromstring(xml_content)
             components = []
-            
-            # Handle different XML structures
+              # Handle different XML structures
             for record in root.findall(".//RECORD"):
                 component = {}
                 for child in record:
                     if child.text:
                         component[child.tag] = child.text.strip()
                 components.append(component)
+            
+            # Handle OBJECT tags (common in some BOM formats)
+            if not components:
+                for obj in root.findall(".//OBJECT"):
+                    component = {}
+                    for child in obj:
+                        if child.text:
+                            component[child.tag] = child.text.strip()
+                    components.append(component)
             
             # Handle direct component tags
             if not components:
@@ -117,8 +136,7 @@ class BOMRAGService:
                 "part_number": component.get("PART-NUM", component.get("PartNumber", "")),
                 "package": component.get("PACKAGE", ""),
                 "description": component.get("DESCRIPTION", ""),
-                "value": component.get("VALUE", component.get("QTY", "")),
-                "partname": component.get("PART-NAME", component.get("PARTNAME", "")),
+                "value": component.get("VALUE", component.get("QTY", "")),                "partname": component.get("PART-NAME", component.get("PARTNAME", "")),
                 "type": "component",
                 "timestamp": source_file  # Use source file as timestamp for now
             })
@@ -126,14 +144,30 @@ class BOMRAGService:
         
         if documents:
             try:
+                # Generate embeddings for all documents using Ollama
+                logger.info(f"Generating embeddings for {len(documents)} documents")
+                embeddings = []
+                for doc in documents:
+                    embedding = await self.generate_embedding(doc)
+                    if embedding:
+                        embeddings.append(embedding)
+                    else:
+                        logger.warning(f"Failed to generate embedding for document: {doc[:50]}...")
+                        embeddings.append([0.0] * 384)  # Fallback embedding
+                
+                logger.info(f"Generated {len(embeddings)} embeddings")
+                
+                # Add to ChromaDB with pre-computed embeddings
                 self.components_collection.add(
                     documents=documents,
                     metadatas=metadatas,
-                    ids=ids
+                    ids=ids,
+                    embeddings=embeddings
                 )
                 logger.info(f"Added {len(documents)} components to knowledge base")
             except Exception as e:
                 logger.error(f"Failed to add components to vector DB: {e}")
+                raise
     
     def _component_to_text(self, component: Dict[str, Any]) -> str:
         """Convert component data to searchable text"""
@@ -256,8 +290,7 @@ class BOMRAGService:
             )
             context_parts.append(f"   Source: {metadata.get('source_file', 'Unknown')}")
             context_parts.append(f"   Details: {result['document'][:100]}...")
-            context_parts.append("")
-        
+            context_parts.append("")        
         context_parts.append(f"*Search method: {similar.get('method', 'unknown')}*")
         return "\n".join(context_parts)
     

@@ -40,10 +40,10 @@ npm run dev
 
 The backend is located in the `backend` folder and uses FastAPI (Python).
 
-1. Open a terminal and navigate to the `backend` directory:
+1. Open a terminal and navigate to the project root directory (not the backend folder):
 
    ```powershell
-   cd backend
+   cd e:\work\file-fusion-ai-chat
    ```
 
 2. (Optional) Create and activate a virtual environment:
@@ -59,13 +59,33 @@ The backend is located in the `backend` folder and uses FastAPI (Python).
    pip install fastapi uvicorn
    ```
 
-4. Start the backend server:
+4. Start the backend server from the project root:
 
    ```powershell
-   uvicorn backend:main:app --reload
+   uvicorn backend.main:app --reload
    ```
 
+   **Note:** Use `backend.main:app` (with dot notation) when running from the project root.
+
 The backend will be available at http://localhost:8000
+
+## Running Both Frontend and Backend
+
+To use the BOM comparison feature, you need both servers running:
+
+1. **Terminal 1 - Backend:**
+   ```powershell
+   uvicorn backend.main:app --reload
+   ```
+
+2. **Terminal 2 - Frontend:**
+   ```powershell
+   npm run dev
+   ```
+
+3. Open http://localhost:8080 in your browser
+
+4. Upload two XML BOM files and use the Compare feature
 
 ## What technologies are used for this project?
 
@@ -91,29 +111,30 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-trick
 
 ## Troubleshooting: BOM Comparison Failed to Fetch
 
-If you see a "BOM comparison failed: Failed to fetch" error, follow these steps:
+If you see a "BOM comparison failed: Failed to fetch" or connection refused error, follow these steps:
 
-1. **Start the backend server**
-   - Open a terminal and run:
-     ```powershell
-     uvicorn backend:main:app --reload
-     ```
-   - Make sure it says "Uvicorn running on http://127.0.0.1:8000".
+1. **Ensure both servers are running:**
+   - Backend: Should show "Uvicorn running on http://127.0.0.1:8000"
+   - Frontend: Should show "Local: http://localhost:8080/"
 
-2. **Start the frontend dev server**
-   - In a separate terminal, run:
-     ```powershell
-     npm run dev
-     ```
-   - Open http://localhost:8080 in your browser.
+2. **Start the backend server from the project root:**
+   ```powershell
+   uvicorn backend.main:app --reload
+   ```
 
-3. **Check Vite proxy configuration**
-   - The project is set up to proxy `/compare-bom` requests to the backend. If you changed ports or backend address, update `vite.config.ts` accordingly.
+3. **Start the frontend in a separate terminal:**
+   ```powershell
+   npm run dev
+   ```
 
-4. **If you still see the error:**
-   - Make sure nothing else is using port 8000 (backend) or 8080 (frontend).
-   - Check your browser console for CORS or network errors.
-   - Ensure both servers are running and accessible.
+4. **Check if both URLs work:**
+   - Backend: http://127.0.0.1:8000 (should show a JSON message)
+   - Frontend: http://localhost:8080 (should show the application)
 
-If you need to change the backend address, update the `proxy` section in `vite.config.ts`.
+5. **If you still see errors:**
+   - Make sure nothing else is using port 8000 (backend) or 8080 (frontend)
+   - Check your browser console for CORS or network errors
+   - Ensure both servers are running and accessible
+
+The project uses Vite proxy to forward `/compare-bom` requests to the backend during development.
 

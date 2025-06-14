@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Request, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Request, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from typing import List, Dict, Any, Optional
@@ -10,7 +10,9 @@ import traceback
 import json
 import aiohttp
 import asyncio
-from rag_service import rag_service
+import uuid
+from datetime import datetime
+from memory_rag_service import memory_rag_service
 
 # Configure logging
 logging.basicConfig(
@@ -30,6 +32,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Background task tracking
+background_tasks_status = {}
+
+class TaskStatus:
+    def __init__(self, task_id: str, task_type: str, total_items: int = 0):
+        self.task_id = task_id
+        self.task_type = task_type
+        self.status = "running"  # running, completed, failed
+        self.progress = 0
+        self.total_items = total_items
+        self.message = ""
+        self.started_at = datetime.now()
+        self.completed_at = None
+        self.error = None
 
 # Pydantic models for AI chat
 class ChatMessage(BaseModel):
@@ -60,8 +77,15 @@ class OllamaGenerateRequest(BaseModel):
 def read_root():
     return {"message": "Hello from FastAPI backend!"}
 
+# Health check endpoint
+@app.get("/api/health")
+async def health_check():
+    """Simple health check endpoint"""
+    return {"status": "ok", "message": "Backend is running"}
+
 # Helper to parse BOM XML and ignore Description and NUMBER
 def parse_bom_xml(xml_content: str) -> Dict[str, Dict[str, str]]:
+    logger.info("=== LOCAL parse_bom_xml CALLED (NOT RAG SERVICE) ===")
     logger.info("Starting to parse XML...")
     components = {}
     
@@ -307,104 +331,59 @@ def format_part(part):
 
 @app.post("/compare-bom")
 async def compare_bom(old_file: UploadFile = File(...), new_file: UploadFile = File(...)) -> Any:
+    logger.info(f"=== BOM COMPARISON ENDPOINT CALLED ===")
+    logger.info(f"Received BOM comparison request: {old_file.filename} vs {new_file.filename}")
     try:
-        logger.info(f"Received comparison request for {old_file.filename} and {new_file.filename}")
-        old_xml = (await old_file.read()).decode('utf-8', errors='replace')
-        new_xml = (await new_file.read()).decode('utf-8', errors='replace')
-        logger.info(f"Old file: {old_file.filename}, size: {len(old_xml)} chars")
-        logger.info(f"New file: {new_file.filename}, size: {len(new_xml)} chars")
+        old_xml = (await old_file.read()).decode()
+        new_xml = (await new_file.read()).decode()
+        logger.info(f"Old XML length: {len(old_xml)}, New XML length: {len(new_xml)}")
         
-        # Save first 500 chars of each file for debugging
-        logger.debug(f"Old XML sample: {old_xml[:500]}...")
-        logger.debug(f"New XML sample: {new_xml[:500]}...")
-        
+        logger.info("Calling local parse_bom_xml for old file...")
         old_components = parse_bom_xml(old_xml)
+        logger.info("Calling local parse_bom_xml for new file...")
         new_components = parse_bom_xml(new_xml)
-        
-        logger.info(f"Old components parsed: {len(old_components)}")
-        logger.info(f"New components parsed: {len(new_components)}")
-        
-        if old_components and new_components:
-            logger.info(f"Old components sample: {list(old_components.keys())[:5]}")
-            logger.info(f"New components sample: {list(new_components.keys())[:5]}")
-        
+        logger.info(f"Parsed components - Old: {len(old_components)}, New: {len(new_components)}")
+
         added = []
         removed = []
         changed = []
-        
+
         def key_fields(part):
-            # Include more fields in the comparison to catch more changes
             return (
-                part.get("REFDES", "") or part.get("Reference", "") or part.get("RefDes", ""),
-                part.get("QTY", "") or part.get("Quantity", "") or part.get("Value", ""),
-                part.get("CORP-NUM", "") or part.get("Manufacturer", "") or part.get("CORP_NUM", ""),
-                part.get("PART-NUM", "") or part.get("PartNumber", "") or part.get("Part Number", ""),
-                part.get("DESCRIPTION", "") or part.get("Description", ""),
-                part.get("PACKAGE", "") or part.get("Package", "") or part.get("Footprint", "")
+                part.get("REFDES", ""),
+                part.get("QTY", ""),
+                part.get("CORP-NUM", ""),
+                part.get("PART-NUM", "")
             )
 
-        # Process new components to find added and changed
         for ref, new_comp in new_components.items():
             if ref not in old_components:
-                logger.info(f"Added component: {ref}")
                 added.append(format_part(new_comp))
             else:
                 old_comp = old_components[ref]
                 if key_fields(old_comp) != key_fields(new_comp):
-                    logger.info(f"Changed component: {ref}")
-                    logger.debug(f"  Old: {key_fields(old_comp)}")
-                    logger.debug(f"  New: {key_fields(new_comp)}")
-                    
-                    # Create the changed component record
-                    changed_comp = {
+                    changed.append({
                         "Reference": ref,
                         "Original": format_part(old_comp),
                         "Modified": format_part(new_comp)
-                    }
-                    
-                    # Log detailed component data for the first few components
-                    if len(changed) < 3:
-                        logger.debug(f"Changed component details: {changed_comp}")
-                    
-                    changed.append(changed_comp)
-          # Process old components to find removed
+                    })
         for ref, old_comp in old_components.items():
             if ref not in new_components:
-                logger.info(f"Removed component: {ref}")
                 removed.append(format_part(old_comp))
-                
-        logger.info(f"Comparison results: Added={len(added)}, Removed={len(removed)}, Changed={len(changed)}")
-        if added:
-            logger.info(f"Added components: {[comp['REFDES'] for comp in added[:3]]}")
-        if removed:
-            logger.info(f"Removed components: {[comp['REFDES'] for comp in removed[:3]]}")
-        if changed:
-            logger.info(f"Changed components: {[comp['Reference'] for comp in changed[:3]]}")
-        
-        # Check if we found anything
-        if not added and not removed and not changed:
-            logger.warning("No differences found between the BOMs. This could be because the files couldn't be parsed correctly.")
-        
-        # For compatibility with frontend, return using consistent field naming
+
         result = {
             "added": added,
             "removed": removed,
-            "changed": changed
+            "changed": changed,
+            "addedComponents": added,
+            "deletedComponents": removed,
+            "changedComponents": changed
         }
-        
-        # Add debugging information to help diagnose any issues
-        if changed:
-            logger.debug("Sample changed component from backend:")
-            logger.debug(f"Keys in first changed component: {list(changed[0].keys())}")
-            logger.debug(f"Keys in Original object: {list(changed[0]['Original'].keys())}")
-            logger.debug(f"Keys in Modified object: {list(changed[0]['Modified'].keys())}")
-        
-        logger.info(f"Returning result with: {len(added)} added, {len(removed)} removed, {len(changed)} changed components")
+        print(f"Comparison result: {len(added)} added, {len(removed)} removed, {len(changed)} changed")
         return result
     except Exception as e:
-        logger.error(f"Error in compare_bom: {str(e)}")
-        traceback.print_exc()
-        return JSONResponse(status_code=400, content={"detail": str(e)})
+        print(f"Error during BOM comparison: {str(e)}")
+        return JSONResponse(status_code=400, content={"error": str(e)})
 
 # AI Chat endpoints
 @app.post("/api/chat/completions")
@@ -610,29 +589,156 @@ async def test_ollama_connection(ollama_url: str = "http://localhost:11434"):
 # RAG Endpoints
 @app.post("/api/rag/add-bom")
 async def add_bom_to_knowledge(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    source_name: str = Form(...)
+    source_name: str = Form(...),
+    create_embeddings: bool = Form(True)  # Optional parameter to control embedding creation
 ):
-    """Add BOM file to knowledge base"""
+    """Add BOM file to knowledge base with optional async embedding creation"""
     try:
         content = await file.read()
         content_str = content.decode('utf-8')
         
-        # Parse the XML content
-        bom_data = rag_service.parse_xml_bom(content_str)
+        # Parse the XML content immediately (fast)
+        bom_data = memory_rag_service.parse_xml_bom(content_str)
+        component_count = len(bom_data.get('components', []))
         
-        # Add to knowledge base
-        await rag_service.add_bom_to_knowledge(bom_data, source_name)
+        if not create_embeddings:
+            # Fast path: Just parse and return without creating embeddings
+            return {
+                "status": "success",
+                "message": f"Parsed {component_count} components (no embeddings created)",
+                "source": source_name,
+                "component_count": component_count,
+                "embeddings_created": False
+            }
+        
+        # Create a background task for embedding creation
+        task_id = str(uuid.uuid4())
+        task_status = TaskStatus(task_id, "embedding_creation", component_count)
+        background_tasks_status[task_id] = task_status
+        
+        # Start background embedding creation
+        background_tasks.add_task(
+            create_embeddings_background,
+            task_id,
+            bom_data,
+            source_name
+        )
         
         return {
-            "status": "success",
-            "message": f"Added {len(bom_data.get('components', []))} components to knowledge base",
+            "status": "success", 
+            "message": f"Parsed {component_count} components, creating embeddings in background",
             "source": source_name,
-            "component_count": len(bom_data.get('components', []))
+            "component_count": component_count,
+            "embeddings_created": False,
+            "background_task_id": task_id,
+            "embeddings_status": "processing"
         }
     except Exception as e:
         logger.error(f"Failed to add BOM to knowledge base: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to add BOM: {str(e)}")
+
+async def create_embeddings_background(task_id: str, bom_data: Dict[str, Any], source_name: str):
+    """Background task to create embeddings for BOM components"""
+    task_status = background_tasks_status.get(task_id)
+    if not task_status:
+        return
+    
+    try:
+        task_status.message = "Creating embeddings for components..."
+        components = bom_data.get("components", [])
+        
+        # Add components to vector database with progress tracking
+        await memory_rag_service.add_bom_to_knowledge_with_progress(
+            bom_data, 
+            source_name,
+            progress_callback=lambda current, total: update_task_progress(task_id, current, total)
+        )
+        
+        task_status.status = "completed"
+        task_status.progress = 100
+        task_status.message = f"Successfully created embeddings for {len(components)} components"
+        task_status.completed_at = datetime.now()
+        
+    except Exception as e:
+        task_status.status = "failed"
+        task_status.error = str(e)
+        task_status.message = f"Failed to create embeddings: {str(e)}"
+        task_status.completed_at = datetime.now()
+        logger.error(f"Background embedding task {task_id} failed: {e}")
+
+def update_task_progress(task_id: str, current: int, total: int):
+    """Update progress for a background task"""
+    task_status = background_tasks_status.get(task_id)
+    if task_status:
+        task_status.progress = int((current / total) * 100) if total > 0 else 0
+        task_status.message = f"Processing component {current} of {total}"
+
+@app.get("/api/rag/task-status/{task_id}")
+async def get_task_status(task_id: str):
+    """Get status of a background task"""
+    task_status = background_tasks_status.get(task_id)
+    if not task_status:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {
+        "task_id": task_id,
+        "task_type": task_status.task_type,
+        "status": task_status.status,
+        "progress": task_status.progress,
+        "total_items": task_status.total_items,
+        "message": task_status.message,
+        "started_at": task_status.started_at.isoformat(),
+        "completed_at": task_status.completed_at.isoformat() if task_status.completed_at else None,
+        "error": task_status.error
+    }
+
+@app.get("/api/rag/active-tasks")
+async def get_active_tasks():
+    """Get all active background tasks"""
+    active_tasks = []
+    for task_id, task_status in background_tasks_status.items():
+        if task_status.status == "running":
+            active_tasks.append({
+                "task_id": task_id,
+                "task_type": task_status.task_type,
+                "progress": task_status.progress,
+                "message": task_status.message,
+                "started_at": task_status.started_at.isoformat()
+            })
+    return {"active_tasks": active_tasks}
+
+@app.get("/api/rag/status")
+async def get_rag_status():
+    """Get RAG system status and health"""
+    logger.info("=== RAG STATUS CHECK STARTED ===")
+    try:
+        status = await memory_rag_service.get_status()
+        logger.info("=== RAG STATUS CHECK COMPLETED ===")
+        return status
+    except Exception as e:
+        logger.error(f"RAG status check failed: {e}")
+        return JSONResponse(status_code=500, content={
+            "status": "error",
+            "error": str(e),
+            "database": {"accessible": False, "components_count": 0, "patterns_count": 0},
+            "embedding_service": {"accessible": False},
+            "overall_status": "error"
+        })
+
+@app.get("/api/rag/health")
+async def rag_health():
+    """Simple RAG service health check without accessing collections"""
+    try:
+        return {
+            "status": "ok", 
+            "message": "Memory RAG service initialized",
+            "ollama_url": memory_rag_service.ollama_url,
+            "embedding_model": memory_rag_service.embedding_model
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 @app.post("/api/rag/query")
 async def query_knowledge(request: dict):
@@ -644,7 +750,7 @@ async def query_knowledge(request: dict):
         return {"results": [], "message": "Empty query"}
     
     try:
-        results = await rag_service.query_similar_components(query, n_results)
+        results = await memory_rag_service.query_similar_components(query, n_results)
         return results
     except Exception as e:
         logger.error(f"Knowledge query failed: {e}")
@@ -654,7 +760,7 @@ async def query_knowledge(request: dict):
 async def get_knowledge_stats():
     """Get knowledge base statistics"""
     try:
-        stats = rag_service.get_knowledge_stats()
+        stats = memory_rag_service.get_knowledge_stats()
         return stats
     except Exception as e:
         logger.error(f"Stats retrieval failed: {e}")
@@ -666,63 +772,286 @@ async def get_knowledge_stats():
             "error": str(e)
         }
 
+@app.delete("/api/rag/clear")
+async def clear_knowledge_base():
+    """Clear all data from the knowledge base"""
+    try:
+        # Get counts before deletion
+        stats = memory_rag_service.get_knowledge_stats()
+        components_count = stats.get("components_count", 0)
+        patterns_count = stats.get("patterns_count", 0)
+        
+        # Clear the memory database
+        result = memory_rag_service.clear_knowledge()
+        
+        logger.info(f"Cleared knowledge base: {components_count} components, {patterns_count} patterns")
+        
+        return {
+            "status": "success",
+            "message": f"Cleared {components_count + patterns_count} items from knowledge base",
+            "components_deleted": components_count,
+            "patterns_deleted": patterns_count
+        }
+    except Exception as e:
+        logger.error(f"Failed to clear knowledge base: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear knowledge base: {str(e)}")
+
+# Fast BOM upload without embeddings (for regular preview/compare)
+@app.post("/api/bom/upload-fast")
+async def upload_bom_fast(file: UploadFile = File(...)):
+    """Fast BOM upload that only parses XML without creating embeddings"""
+    try:
+        content = await file.read()
+        content_str = content.decode('utf-8')
+        
+        # Just parse the XML (fast)
+        components = parse_bom_xml(content_str)
+        
+        return {
+            "status": "success",
+            "message": f"Parsed {len(components)} components",
+            "filename": file.filename,
+            "component_count": len(components),
+            "components": components
+        }
+    except Exception as e:
+        logger.error(f"Failed to parse BOM: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse BOM: {str(e)}")
+
+# RAG-Enhanced Chat endpoint
 @app.post("/api/chat/rag-completions")
 async def rag_chat_completions(request: ChatRequest):
-    """Enhanced chat with RAG context"""
+    """RAG-enhanced chat completions that includes relevant knowledge base context"""
     try:
-        # Extract the user's last message for knowledge retrieval
-        user_messages = [msg for msg in request.messages if msg.role == "user"]
-        if user_messages:
-            last_query = user_messages[-1].content
-            
-            # Get relevant knowledge
-            knowledge_context = await rag_service.get_contextual_knowledge(last_query)
-            
-            # Enhance system prompt with retrieved knowledge
-            enhanced_messages = []
-            system_enhanced = False
-            
-            for msg in request.messages:
-                if msg.role == "system" and not system_enhanced:
-                    enhanced_content = f"{msg.content}\n\n{knowledge_context}"
-                    enhanced_messages.append({"role": "system", "content": enhanced_content})
-                    system_enhanced = True
-                else:
-                    enhanced_messages.append({"role": msg.role, "content": msg.content})
-            
-            # If no system message, add one with knowledge
-            if not system_enhanced:
-                enhanced_messages.insert(0, {
-                    "role": "system", 
-                    "content": f"You are an expert electronics engineer and BOM analyst.\n\n{knowledge_context}"
-                })
-            
-            # Forward to Ollama with enhanced context
-            ollama_request = {
-                "model": request.model,
-                "messages": enhanced_messages,
-                "stream": request.stream
+        # Get the last user message for RAG query
+        user_message = ""
+        for message in reversed(request.messages):
+            if message.role == "user":
+                user_message = message.content
+                break
+        
+        # Query RAG knowledge base if we have a user message
+        rag_results = []
+        if user_message.strip():
+            try:
+                query_response = await memory_rag_service.query_similar_components(user_message, 5)
+                if isinstance(query_response, list):
+                    rag_results = query_response
+                elif isinstance(query_response, dict) and 'results' in query_response:
+                    rag_results = query_response['results']
+                logger.info(f"RAG query returned {len(rag_results)} results")
+            except Exception as e:
+                logger.warning(f"RAG query failed, continuing without context: {e}")
+        
+        # Build enhanced prompt with RAG context
+        enhanced_messages = []
+          # Add system message if not present
+        has_system = any(msg.role == "system" for msg in request.messages)
+        if not has_system:
+            if rag_results:
+                system_msg = """You are a knowledgeable electronics engineer and BOM (Bill of Materials) analyst. You have access to detailed component information from uploaded BOMs.
+
+When answering questions:
+- Use the provided component data to give accurate, specific responses
+- Reference components by their REFDES (Reference Designator) when relevant
+- Include part numbers, descriptions, and package types as appropriate
+- Explain component functions and purposes based on their descriptions
+- Consider quantities and usage patterns
+- Be precise about technical specifications
+- If asked about components not in the provided data, clearly state that
+
+You understand BOM structures with fields like:
+- REFDES (Reference Designator, e.g., C1, R5, U10)
+- PART-NAME (Manufacturer part name)
+- PART-NUM (Internal part number)
+- DESCRIPTION (Component description and specifications)
+- PACKAGE (Physical package type)
+- QTY (Quantity used)
+- OPT (Optional status, e.g., NA for not applicable, blank for required)"""
+            else:
+                system_msg = "You are a helpful AI assistant with expertise in electronics and BOM analysis."
+            enhanced_messages.append({"role": "system", "content": system_msg})
+        
+        # Add all existing messages
+        for message in request.messages:
+            enhanced_messages.append({"role": message.role, "content": message.content})
+        
+        # If we have RAG results, enhance the last user message with context
+        if rag_results and enhanced_messages:
+            # Find the last user message to enhance
+            for i in range(len(enhanced_messages) - 1, -1, -1):
+                if enhanced_messages[i]["role"] == "user":
+                    original_content = enhanced_messages[i]["content"]
+                      # Build context from RAG results with better formatting
+                    context_parts = []
+                    context_parts.append("=== RELEVANT BOM COMPONENTS ===")
+                    
+                    for j, result in enumerate(rag_results[:5]):  # Use top 5 results
+                        metadata = result.get('metadata', {})
+                          # Extract structured component data
+                        refdes = metadata.get('REFDES', '')
+                        part_name = metadata.get('PART-NAME', '')
+                        part_num = metadata.get('PART-NUM', '')
+                        description = metadata.get('DESCRIPTION', '')
+                        package = metadata.get('PACKAGE', '')
+                        qty = metadata.get('QTY', '')
+                        opt = metadata.get('OPT', '')
+                        
+                        # Format component in a structured way
+                        comp_info = f"\nComponent {j+1}:"
+                        comp_info += f"\n  Reference Designator: {refdes}"
+                        comp_info += f"\n  Part Name: {part_name}"
+                        comp_info += f"\n  Part Number: {part_num}"
+                        comp_info += f"\n  Description: {description}"
+                        comp_info += f"\n  Package: {package}"
+                        comp_info += f"\n  Quantity: {qty}"
+                        comp_info += f"\n  OPT Status: {opt}"
+                        
+                        if metadata.get('source'):
+                            comp_info += f"\n  Source File: {metadata['source']}"
+                        
+                        context_parts.append(comp_info)
+                    
+                    context_parts.append("\n=== END BOM COMPONENTS ===")
+                    
+                    if len(context_parts) > 2:  # More than just headers
+                        enhanced_content = f"""You are analyzing BOM (Bill of Materials) data. Use the following component information to provide accurate, detailed responses about the electronic components.
+
+{chr(10).join(context_parts)}
+
+User question: {original_content}
+
+Instructions: 
+- Reference specific components by their REFDES (Reference Designator)
+- Include part numbers when relevant
+- Explain component functions based on descriptions
+- Consider quantity information for usage patterns
+- Note OPT status (NA means not applicable/optional, blank means required)
+- Format your response clearly and professionally"""
+                        enhanced_messages[i]["content"] = enhanced_content
+                        logger.info(f"Enhanced user message with {len(rag_results)} structured BOM components")
+                    break
+        
+        # Convert to format expected by existing chat endpoint
+        chat_request = ChatRequest(
+            model=request.model,
+            messages=[ChatMessage(role=msg["role"], content=msg["content"]) for msg in enhanced_messages],
+            stream=request.stream,
+            ollama_url=request.ollama_url
+        )
+        
+        # Use existing chat completions logic
+        prompt = ""
+        for message in chat_request.messages:
+            if message.role == "system":
+                prompt += f"System: {message.content}\n"
+            elif message.role == "user":
+                prompt += f"User: {message.content}\n"
+            elif message.role == "assistant":
+                prompt += f"Assistant: {message.content}\n"
+        
+        prompt += "Assistant: "
+        
+        # Prepare Ollama request
+        ollama_request = {
+            "model": chat_request.model,
+            "prompt": prompt,
+            "stream": chat_request.stream,
+            "options": {
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "top_k": 40,
             }
-            
-            async with aiohttp.ClientSession() as session:
+        }
+        
+        # Make request to Ollama with timeout for remote connections
+        timeout = aiohttp.ClientTimeout(total=30, connect=10)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            try:
                 async with session.post(
-                    f"{request.ollama_url}/v1/chat/completions",
-                    json=ollama_request,
-                    timeout=aiohttp.ClientTimeout(total=60)
+                    f"{chat_request.ollama_url}/api/generate",
+                    json=ollama_request
                 ) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        return result
-                    else:
+                    if response.status != 200:
                         error_text = await response.text()
-                        raise HTTPException(status_code=response.status, detail=error_text)
-        
-        # Fallback to regular chat if no enhancement possible
-        return await chat_completions(request)
-        
+                        logger.error(f"Ollama error: {response.status} - {error_text}")
+                        return JSONResponse(
+                            status_code=response.status,
+                            content={"error": f"Ollama server error: {error_text}"}
+                        )
+                    
+                    if chat_request.stream:
+                        # Stream response - not implemented for RAG yet
+                        async def generate():
+                            async for line in response.content:
+                                if line:
+                                    try:
+                                        data = json.loads(line.decode('utf-8'))
+                                        if 'response' in data:
+                                            chunk = {
+                                                "id": "chatcmpl-rag-ollama",
+                                                "object": "chat.completion.chunk",
+                                                "created": int(asyncio.get_event_loop().time()),
+                                                "model": chat_request.model,
+                                                "choices": [{
+                                                    "index": 0,
+                                                    "delta": {"content": data['response']},
+                                                    "finish_reason": "stop" if data.get('done', False) else None
+                                                }]
+                                            }
+                                            yield f"data: {json.dumps(chunk)}\n\n"
+                                            
+                                            if data.get('done', False):
+                                                yield "data: [DONE]\n\n"
+                                                break
+                                    except json.JSONDecodeError:
+                                        continue
+                        
+                        return StreamingResponse(
+                            generate(),
+                            media_type="text/plain",
+                            headers={"Cache-Control": "no-cache"}
+                        )
+                    else:
+                        # Non-streaming response
+                        data = await response.json()
+                        
+                        # Convert to OpenAI format with RAG results included
+                        return {
+                            "id": "chatcmpl-rag-ollama",
+                            "object": "chat.completion",
+                            "created": int(asyncio.get_event_loop().time()),
+                            "model": chat_request.model,
+                            "choices": [{
+                                "index": 0,
+                                "message": {
+                                    "role": "assistant",
+                                    "content": data.get('response', '')
+                                },
+                                "finish_reason": "stop"
+                            }],
+                            "usage": {
+                                "prompt_tokens": data.get('prompt_eval_count', 0),
+                                "completion_tokens": data.get('eval_count', 0),
+                                "total_tokens": data.get('prompt_eval_count', 0) + data.get('eval_count', 0)
+                            },
+                            "rag_results": rag_results  # Include RAG results in response
+                        }
+                        
+            except aiohttp.ClientError as e:
+                logger.error(f"Connection error to Ollama at {chat_request.ollama_url}: {str(e)}")
+                return JSONResponse(
+                    status_code=503,
+                    content={"error": f"Cannot connect to Ollama server at {chat_request.ollama_url}. Please check the URL and ensure the server is running."}
+                )
+                    
     except Exception as e:
-        logger.error(f"RAG chat completion failed: {e}")
-        raise HTTPException(status_code=500, detail=f"RAG chat failed: {str(e)}")
+        logger.error(f"Error in RAG chat completions: {str(e)}")
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"RAG chat failed: {str(e)}"}
+        )
 
 if __name__ == "__main__":
     import uvicorn

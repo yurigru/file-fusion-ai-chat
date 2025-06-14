@@ -32,6 +32,34 @@ export interface RAGStats {
   error?: string;
 }
 
+export interface RAGStatus {
+  status: string;
+  overall_status?: string;
+  database: {
+    accessible: boolean;
+    type?: string;
+    components: number;
+    patterns: number;
+    total_items: number;
+  };
+  embedding_service: {
+    accessible: boolean;
+    model: string;
+    url: string;
+  };
+  collections: {
+    bom_components: {
+      count: number;
+      status: string;
+    };
+    design_patterns: {
+      count: number;
+      status: string;
+    };
+  };
+  error?: string;
+}
+
 export class RAGService {
   private baseUrl: string;
 
@@ -89,6 +117,37 @@ export class RAGService {
     if (!response.ok) {
       const error = await response.text();
       throw new Error(`Failed to get knowledge stats: ${error}`);
+    }
+
+    return await response.json();
+  }
+
+  async getRAGStatus(): Promise<RAGStatus> {
+    const response = await fetch(`${this.baseUrl}/api/rag/status`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to get RAG status: ${error}`);
+    }
+
+    return await response.json();
+  }
+
+  async clearKnowledgeBase(): Promise<{
+    status: string;
+    message: string;
+    components_deleted: number;
+    patterns_deleted: number;
+  }> {
+    const response = await fetch(`${this.baseUrl}/api/rag/clear`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to clear knowledge base: ${error}`);
     }
 
     return await response.json();

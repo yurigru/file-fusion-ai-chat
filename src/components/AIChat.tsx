@@ -1,6 +1,5 @@
-
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, RefreshCw, Server, Settings, Database, Upload, Info, Search } from "lucide-react";
+import { Send, Bot, User, RefreshCw, Server, Settings, Database, Upload, Info, Search, Trash2, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,7 +12,7 @@ import ModelSelector from "./ModelSelector";
 import { OllamaModel, ChatMessage, ComparisonResult, UploadedFile, ServerConfig, MCPTool } from "@/types";
 import { toast } from "@/components/ui/sonner";
 import { ChatService } from "@/services/chatService";
-import { ragService, RAGStats, RAGResult } from "@/services/ragService";
+import { ragService, RAGResult } from "@/services/ragService";
 
 interface AIChatProps {
   selectedFile: UploadedFile | null;
@@ -33,12 +32,9 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [useRAG, setUseRAG] = useState(true);
-  const [ragStats, setRagStats] = useState<RAGStats | null>(null);
+  const [showSettings, setShowSettings] = useState(false);  const [useRAG, setUseRAG] = useState(true);
   const [ragResults, setRagResults] = useState<RAGResult[]>([]);
-  const [showRagResults, setShowRagResults] = useState(false);
-  const [isUploadingToKB, setIsUploadingToKB] = useState(false);
+  const [showRagResults, setShowRagResults] = useState(false);  const [isUploadingToKB, setIsUploadingToKB] = useState(false);
   const [serverConfig, setServerConfig] = useState<ServerConfig>({
     type: "ollama",
     modelName: "llama3.2",
@@ -79,14 +75,7 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    // Load RAG stats on component mount
-    loadRagStats();
-  }, []);
-
-  useEffect(() => {
+  }, [messages]);  useEffect(() => {
     // Add a system message when files are selected or compared
     if (selectedFile || (comparedFiles.file1 && comparedFiles.file2)) {
       let systemMessage = "";
@@ -109,15 +98,6 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
       }
     }
   }, [selectedFile, comparedFiles.file1, comparedFiles.file2]);
-
-  const loadRagStats = async () => {
-    try {
-      const stats = await ragService.getKnowledgeStats();
-      setRagStats(stats);
-    } catch (error) {
-      console.error("Failed to load RAG stats:", error);
-    }
-  };
   const uploadToKnowledgeBase = async () => {
     if (!selectedFile) {
       toast.error("Please select a file first");
@@ -132,21 +112,17 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
         type: selectedFile.type,
         lastModified: selectedFile.lastModified
       });
-      
-      const result = await ragService.addBOMToKnowledge(file, selectedFile.name);
+        const result = await ragService.addBOMToKnowledge(file, selectedFile.name);
       toast.success(`Added ${result.component_count} components to knowledge base`);
-      await loadRagStats(); // Refresh stats
     } catch (error) {
       console.error("Failed to upload to knowledge base:", error);
       toast.error(`Failed to upload: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setIsUploadingToKB(false);
-    }
-  };
+      setIsUploadingToKB(false);    }  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };  const handleModelChange = (newModel: OllamaModel | string) => {
+  };const handleModelChange = (newModel: OllamaModel | string) => {
     setModel(newModel);
     // Update serverConfig when model changes
     const modelName = typeof newModel === 'string' ? newModel : String(newModel);
@@ -206,10 +182,10 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
         let response: any;
         let ragResultsForMessage: RAGResult[] = [];
         
-        if (useRAG && ragStats && ragStats.total > 0) {
+        // Use RAG if available and enabled
+        if (useRAG) {
           // Try RAG-enhanced chat first
-          try {
-            const ragResponse = await ragService.sendRAGMessage({
+          try {            const ragResponse = await ragService.sendRAGMessage({
               model: serverConfig.modelName || "llama3.2",
               messages: allMessages.map(msg => ({
                 role: msg.role,
@@ -218,7 +194,7 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
               ollama_url: serverConfig.ollamaUrl || "http://localhost:11434"
             });
             
-            response = ragResponse.response;
+            response = ragResponse;
             ragResultsForMessage = ragResponse.rag_results || [];
             setRagResults(ragResultsForMessage);
             
@@ -330,7 +306,7 @@ This would be processed by the MCP server with the available tools.`;
             <CardTitle className="text-lg flex items-center">
               <Bot className="mr-2 h-5 w-5" />
               AI Assistant
-              {useRAG && ragStats && ragStats.total > 0 && (
+              {useRAG && (
                 <Badge variant="secondary" className="ml-2">
                   <Database className="h-3 w-3 mr-1" />
                   RAG
@@ -409,16 +385,7 @@ This would be processed by the MCP server with the available tools.`;
                     onClick={() => setUseRAG(!useRAG)}
                   >
                     {useRAG ? "Enabled" : "Disabled"}
-                  </Button>
-                </div>
-                
-                {ragStats && (
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <div>Knowledge Base: {ragStats.total} items</div>
-                    <div>Components: {ragStats.components}</div>
-                    <div>Status: {ragStats.status}</div>
-                  </div>
-                )}
+                  </Button>                </div>
               </div>
               
               {serverConfig.type === "mcp" && getActiveTools().length > 0 && (
@@ -433,10 +400,8 @@ This would be processed by the MCP server with the available tools.`;
                       </Badge>
                     ))}
                   </div>
-                </>
-              )}
-            </div>
-          )}
+                </>              )}
+            </div>          )}
         </CardHeader>
         
         <CardContent className="flex flex-col p-0 flex-1">
@@ -586,8 +551,7 @@ This would be processed by the MCP server with the available tools.`;
             </CollapsibleContent>
           </Card>
         </Collapsible>
-      )}
-    </div>
+      )}    </div>
   );
 };
 
