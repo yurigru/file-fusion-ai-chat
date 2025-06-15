@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, RefreshCw, Server, Settings, Database, Upload, Info, Search, Trash2, AlertCircle, CheckCircle, XCircle, Eye, Loader2 } from "lucide-react";
+import { Send, Bot, User, RefreshCw, Server, Settings, Database, Upload, Info, Search, Trash2, AlertCircle, CheckCircle, XCircle, Eye, Loader2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ModelSelector from "./ModelSelector";
+import MarkdownMessage from "./MarkdownMessage";
 import { OllamaModel, ChatMessage, ComparisonResult, UploadedFile, ServerConfig, MCPTool } from "@/types";
 import { toast } from "@/components/ui/sonner";
 import { ChatService } from "@/services/chatService";
@@ -22,12 +23,56 @@ interface AIChatProps {
 }
 
 const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) => {
-  const [model, setModel] = useState<OllamaModel | string>("llama3.2");
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [model, setModel] = useState<OllamaModel | string>("llama3.2");  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: `welcome-${Date.now()}`,
       role: "assistant",
-      content: "👋 Hi! I'm your AI assistant powered by Ollama with RAG (Retrieval-Augmented Generation). I can help you with:\n\n• 📁 Analyzing uploaded files (BOMs, netlists, etc.)\n• 🔍 Comparing file differences\n• 💡 Explaining technical concepts\n• 🤔 Answering questions on any topic\n• 🧠 Using knowledge from uploaded BOMs for enhanced responses\n\nI'm available even without uploading files! You can select different AI models from the dropdown above. What would you like to know?",
+      content: `# 👋 Welcome to AI Assistant with Enhanced Chat!
+
+I'm your AI assistant powered by Ollama with **RAG (Retrieval-Augmented Generation)**. I now support **full Markdown rendering** for better text visibility!
+
+## 🚀 What I can help you with:
+
+### 📁 File Analysis
+- Analyzing uploaded files (BOMs, netlists, etc.)
+- Comparing file differences
+- Processing technical documents
+
+### 💡 Enhanced Features
+- **Markdown support** with syntax highlighting
+- Code blocks with proper formatting
+- Tables, lists, and rich text
+- Mathematical expressions and diagrams
+
+### 🤔 General Assistance
+- Answering questions on any topic
+- Explaining technical concepts
+- Using knowledge from uploaded BOMs
+
+## 📝 Markdown Examples:
+
+Here's some \`inline code\` and a code block:
+
+\`\`\`javascript
+function greet(name) {
+    return \`Hello, \${name}!\`;
+}
+console.log(greet("World"));
+\`\`\`
+
+**Bold text**, *italic text*, and [links](https://example.com)
+
+> This is a blockquote for important information
+
+| Feature | Status |
+|---------|--------|
+| Markdown | ✅ Enabled |
+| Syntax Highlighting | ✅ Enabled |
+| Tables | ✅ Enabled |
+
+I'm available even without uploading files! You can select different AI models from the dropdown above. 
+
+**What would you like to know?**`,
       timestamp: Date.now()
     }
   ]);
@@ -197,10 +242,42 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
     }
     setShowRagDetails(!showRagDetails);
   };
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };const handleModelChange = (newModel: OllamaModel | string) => {
+  };  const copyRagResults = () => {
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      total_results: ragResults.length,
+      average_similarity: ragResults.length > 0 ? (ragResults.reduce((sum, r) => sum + r.similarity, 0) / ragResults.length) : 0,
+      results: ragResults.map((result, index) => {
+        const metadata = result.metadata as any; // Cast to handle dynamic structure
+        return {
+          index: index + 1,
+          similarity: result.similarity,
+          component: {
+            // Handle both new and legacy field names
+            part_number: metadata.part_number || metadata['PART-NUM'] || '',
+            component_ref: metadata.component_ref || metadata['REFDES'] || '',
+            description: metadata.description || metadata['DESCRIPTION'] || '',
+            value: metadata.value || metadata['PART-NAME'] || '',
+            package: metadata.package || metadata['PACKAGE'] || '',
+            type: metadata.type || metadata['OPT'] || 'component',
+            quantity: metadata['QTY'] || '',
+            // Include all raw metadata for debugging
+            raw_metadata: metadata
+          },
+          source_file: metadata.source_file || metadata.source || metadata['source'] || '',
+          retrieved_content: (result as any).document || (result as any).content || 'No content available',
+          data_format: metadata['REFDES'] ? 'backend_format' : 'frontend_format'
+        };
+      })
+    };
+    
+    navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2));
+    toast.success("RAG debug info copied to clipboard");
+  };
+
+  const handleModelChange = (newModel: OllamaModel | string) => {
     setModel(newModel);
     // Update serverConfig when model changes
     const modelName = typeof newModel === 'string' ? newModel : String(newModel);
@@ -716,9 +793,13 @@ This would be processed by the MCP server with the available tools.`;
                             : message.role === "system"
                             ? "System"
                             : "AI Assistant"}
-                        </span>
+                        </span>                      </div>
+                      <div className="message-content">
+                        <MarkdownMessage 
+                          content={message.content}
+                          className={message.role === "system" ? "text-xs" : ""}
+                        />
                       </div>
-                      <p className="whitespace-pre-wrap">{message.content}</p>
                       <div className="text-xs opacity-50 mt-1 text-right">
                         {new Date(message.timestamp).toLocaleTimeString()}
                       </div>
@@ -765,36 +846,122 @@ This would be processed by the MCP server with the available tools.`;
           </div>
         </CardContent>
       </Card>
-      
-      {/* RAG Results Panel */}
+        {/* Enhanced RAG Results Panel */}
       {ragResults.length > 0 && (
         <Collapsible open={showRagResults} onOpenChange={setShowRagResults}>
-          <Card>
+          <Card className="border-primary/20 bg-primary/5">
             <CollapsibleTrigger asChild>
-              <CardHeader className="px-4 py-2 cursor-pointer hover:bg-accent/50">
+              <CardHeader className="px-4 py-3 cursor-pointer hover:bg-accent/50">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm flex items-center">
-                    <Search className="mr-2 h-4 w-4" />
+                    <Search className="mr-2 h-4 w-4 text-primary" />
                     Knowledge Retrieved ({ragResults.length} items)
-                  </CardTitle>
-                  <Button variant="ghost" size="sm">
-                    {showRagResults ? "Hide" : "Show"}
-                  </Button>
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      Debug Mode
+                    </Badge>
+                  </CardTitle>                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="text-xs">
+                      Avg: {ragResults.length > 0 ? (ragResults.reduce((sum, r) => sum + r.similarity, 0) / ragResults.length * 100).toFixed(1) : 0}%
+                    </Badge>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="sm" onClick={copyRagResults}>
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Copy RAG debug info to clipboard
+                      </TooltipContent>
+                    </Tooltip>
+                    <Button variant="ghost" size="sm">
+                      {showRagResults ? "Hide Details" : "Show Details"}
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  RAG retrieved {ragResults.length} relevant chunks from knowledge base to enhance the AI response
                 </div>
               </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
+            </CollapsibleTrigger><CollapsibleContent>
               <CardContent className="px-4 py-2">
-                <ScrollArea className="h-32">
-                  <div className="space-y-2">
+                <ScrollArea className="h-64">
+                  <div className="space-y-3">
                     {ragResults.map((result, index) => (
-                      <div key={index} className="text-xs border rounded p-2">
-                        <div className="font-medium">{result.metadata.part_number || result.metadata.component_ref}</div>
-                        <div className="text-muted-foreground">
-                          {result.metadata.description} | {result.metadata.value} | {result.metadata.package}
+                      <div key={index} className="border rounded-lg p-3 bg-card">
+                        {/* Header with metadata */}
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="text-xs">
+                              #{index + 1}
+                            </Badge>
+                            <span className="text-xs font-medium text-muted-foreground">
+                              Similarity: {(result.similarity * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <Badge 
+                            variant={result.similarity > 0.8 ? "default" : result.similarity > 0.6 ? "secondary" : "outline"}
+                            className="text-xs"
+                          >
+                            {result.similarity > 0.8 ? "High Match" : result.similarity > 0.6 ? "Good Match" : "Low Match"}
+                          </Badge>
+                        </div>                        {/* Component/Part Information */}
+                        <div className="mb-2">
+                          <div className="text-sm font-semibold text-foreground">
+                            {result.metadata.part_number || 
+                             (result.metadata as any)['PART-NUM'] || 
+                             result.metadata.component_ref || 
+                             (result.metadata as any)['REFDES'] || 
+                             "Unknown Component"}
+                          </div>
+                          {(result.metadata.description || (result.metadata as any)['DESCRIPTION']) && (
+                            <div className="text-xs text-muted-foreground">
+                              {result.metadata.description || (result.metadata as any)['DESCRIPTION']}
+                            </div>
+                          )}
+                          <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+                            {(result.metadata.value || (result.metadata as any)['PART-NAME']) && (
+                              <span>Value: {result.metadata.value || (result.metadata as any)['PART-NAME']}</span>
+                            )}
+                            {(result.metadata.package || (result.metadata as any)['PACKAGE']) && (
+                              <span>Package: {result.metadata.package || (result.metadata as any)['PACKAGE']}</span>
+                            )}
+                            {(result.metadata.type || (result.metadata as any)['OPT']) && (
+                              <span>Type: {result.metadata.type || (result.metadata as any)['OPT']}</span>
+                            )}
+                            {(result.metadata as any)['QTY'] && (
+                              <span>Qty: {(result.metadata as any)['QTY']}</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-muted-foreground">
-                          Source: {result.metadata.source_file} | Similarity: {(result.similarity * 100).toFixed(1)}%
+
+                        {/* Retrieved Text Content */}
+                        <div className="mb-2">
+                          <div className="text-xs font-medium text-foreground mb-1">Retrieved Content:</div>
+                          <div className="bg-muted/30 rounded p-2 text-xs">
+                            {result.document ? (
+                              <MarkdownMessage 
+                                content={result.document}
+                                className="text-xs"
+                              />
+                            ) : (
+                              <div className="text-muted-foreground italic">
+                                Raw component data - no formatted content available
+                              </div>
+                            )}
+                          </div>
+                        </div>                        {/* Source Information */}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+                          <span>
+                            Source: {result.metadata.source_file || 
+                                   (result.metadata as any).source || 
+                                   (result.metadata as any)['source'] || 
+                                   "Unknown"}
+                          </span>
+                          <span>
+                            Component: {result.metadata.component_ref || 
+                                      (result.metadata as any)['REFDES'] || 
+                                      "N/A"}
+                          </span>
                         </div>
                       </div>
                     ))}

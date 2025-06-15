@@ -1,6 +1,107 @@
+/* Import highlight.js theme for code syntax highlighting */
+@import 'highlight.js/styles/github-dark.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Chat message markdown improvements */
+.chat-message-markdown {
+  line-height: 1.6;
+}
+
+.chat-message-markdown pre {
+  background: hsl(var(--muted)) !important;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  padding: 12px;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-size: 0.875rem;
+}
+
+.chat-message-markdown code {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+  font-size: 0.875rem;
+}
+
+.chat-message-markdown p code {
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+.chat-message-markdown blockquote {
+  border-left: 4px solid hsl(var(--border));
+  padding-left: 16px;
+  margin: 8px 0;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+}
+
+.chat-message-markdown h1,
+.chat-message-markdown h2,
+.chat-message-markdown h3 {
+  color: hsl(var(--foreground));
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.chat-message-markdown h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.chat-message-markdown h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.chat-message-markdown h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.chat-message-markdown ul,
+.chat-message-markdown ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.chat-message-markdown li {
+  margin: 4px 0;
+}
+
+.chat-message-markdown table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.chat-message-markdown th,
+.chat-message-markdown td {
+  border: 1px solid hsl(var(--border));
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.chat-message-markdown th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+}
+
+.chat-message-markdown a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+
+.chat-message-markdown a:hover {
+  color: hsl(var(--primary));
+  opacity: 0.8;
+}
 
 @layer base {
   :root {
