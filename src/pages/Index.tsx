@@ -28,18 +28,7 @@ const Index = () => {
   const [connections, setConnections] = useState<NetlistConnection[]>([]);
   const [fileType, setFileType] = useState<"bom" | "netlist" | null>(null);
   const [tablePreview, setTablePreview] = useState<any[] | null>(null);
-  const [isComparing, setIsComparing] = useState(false); // Add isComparing state
-  // Auto-select first two files when files are uploaded
-  useEffect(() => {
-    if (files.length >= 2 && selectedFiles.length === 0) {
-      // Automatically select the first two files
-      const firstTwoFiles = files.slice(0, 2);
-      setSelectedFiles(firstTwoFiles);
-      console.log("Auto-selected first two files:", firstTwoFiles.map(f => f.name));
-        // Switch to compare tab when auto-selecting files
-      setActiveTab("compare");
-    }
-  }, [files]);
+  const [isComparing, setIsComparing] = useState(false); // Add isComparing state  // Auto-trigger comparison when 2 files are selected
 
   // Update table preview based on previewed file
   useEffect(() => {
@@ -91,14 +80,44 @@ const Index = () => {
   useEffect(() => {
     // When two files are selected, automatically set them as comparison files
     if (selectedFiles.length === 2) {
+      // Auto-detect comparison direction based on filenames containing "old" and "new"
+      const file1Name = selectedFiles[0].name.toLowerCase();
+      const file2Name = selectedFiles[1].name.toLowerCase();
+      
+      const file1HasOld = file1Name.includes('old');
+      const file1HasNew = file1Name.includes('new');
+      const file2HasOld = file2Name.includes('old');
+      const file2HasNew = file2Name.includes('new');
+      
+      let orderedFiles = { file1: selectedFiles[0], file2: selectedFiles[1] };
+      
+      // If we can clearly identify old and new files, order them appropriately
+      if ((file1HasOld && file2HasNew) || (file2HasOld && file1HasNew)) {
+        if (file1HasOld && file2HasNew) {
+          // File 1 is old, File 2 is new - this is the correct order
+          orderedFiles = { file1: selectedFiles[0], file2: selectedFiles[1] };
+        } else if (file2HasOld && file1HasNew) {
+          // File 2 is old, File 1 is new - swap them so old is first
+          orderedFiles = { file1: selectedFiles[1], file2: selectedFiles[0] };
+        }
+        
+        console.log("Auto-detected comparison direction:", {
+          oldFile: orderedFiles.file1.name,
+          newFile: orderedFiles.file2.name,
+          reason: "Detected 'old' and 'new' in filenames"
+        });
+        
+        toast.success(`Auto-detected comparison direction: ${orderedFiles.file1.name} (old) → ${orderedFiles.file2.name} (new)`);
+      }
+      
       setComparisonFiles({
-        file1: selectedFiles[0],
-        file2: selectedFiles[1],
+        file1: orderedFiles.file1,
+        file2: orderedFiles.file2,
         result: null,
       });
       
       // Try to detect the file type
-      detectFileType(selectedFiles[0], selectedFiles[1]);
+      detectFileType(orderedFiles.file1, orderedFiles.file2);
       
       // Auto-switch to compare tab when 2 files are selected
       setActiveTab("compare");
@@ -109,7 +128,8 @@ const Index = () => {
         result: null,
       });
       setFileType(null);
-    }  }, [selectedFiles]);
+    }
+  }, [selectedFiles]);
 
   const detectFileType = (file1: UploadedFile, file2: UploadedFile) => {
     const determineType = (file: UploadedFile): "bom" | "netlist" | null => {
@@ -145,9 +165,7 @@ const Index = () => {
       setFileType(null);
       console.log("Setting fileType to null - types don't match");
     }
-  };
-
-  const handleFilesUploaded = (newFiles: UploadedFile[]) => {
+  };  const handleFilesUploaded = (newFiles: UploadedFile[]) => {
     // Process uploaded files
     const processedFiles = newFiles.map(file => {
       // Try to detect if this is a BOM or netlist file
@@ -169,7 +187,43 @@ const Index = () => {
       };
     });
 
-    setFiles((prev) => [...prev, ...processedFiles]);
+    // Update files list
+    const updatedFiles = [...files, ...processedFiles];
+    setFiles(updatedFiles);
+    
+    // Handle batch upload selection logic
+    if (processedFiles.length >= 2) {
+      // If uploading 2 or more files at once, select the first 2 for comparison
+      const newSelection = processedFiles.slice(0, 2);
+      setSelectedFiles(newSelection);
+      console.log("Batch upload: Auto-selected first 2 files for comparison:", newSelection.map(f => f.name));
+      toast.success(`Ready to compare: ${newSelection[0].name} vs ${newSelection[1].name}`);
+    } else if (processedFiles.length === 1) {
+      // Single file upload - use sliding window logic with existing selection
+      const newFile = processedFiles[0];
+      
+      if (selectedFiles.length === 0) {
+        // First file uploaded - auto-select it
+        setSelectedFiles([newFile]);
+        console.log("Auto-selected first file:", newFile.name);
+        toast.info(`Selected ${newFile.name} - upload or select another file to compare`);
+      } else if (selectedFiles.length === 1) {
+        // Second file uploaded - auto-select it (now have 2 for comparison)
+        setSelectedFiles([...selectedFiles, newFile]);
+        console.log("Auto-selected second file for comparison:", newFile.name);
+        toast.success(`Ready to compare: ${selectedFiles[0].name} vs ${newFile.name}`);
+      } else if (selectedFiles.length === 2) {
+        // Third file uploaded - sliding window (remove first, keep second, add new)
+        const newSelection = [selectedFiles[1], newFile];
+        setSelectedFiles(newSelection);
+        console.log("Sliding window selection:", {
+          removed: selectedFiles[0].name,
+          kept: selectedFiles[1].name,
+          added: newFile.name
+        });
+        toast.success(`Updated comparison: ${selectedFiles[1].name} vs ${newFile.name}`);
+      }
+    }
     
     // Automatically upload XML BOM files to RAG knowledge base
     uploadXMLFilesToRAG(processedFiles);
@@ -225,21 +279,40 @@ const Index = () => {
       }
     }
   };
-
   const handleSelectFile = (file: UploadedFile) => {
     if (selectedFiles.some((f) => f.id === file.id)) {
       // Deselect the file
-      setSelectedFiles(selectedFiles.filter((f) => f.id !== file.id));
+      const newSelection = selectedFiles.filter((f) => f.id !== file.id);
+      setSelectedFiles(newSelection);
+      console.log("Deselected file:", file.name);
+      
+      if (newSelection.length === 0) {
+        toast.info("No files selected for comparison");
+      } else if (newSelection.length === 1) {
+        toast.info(`Only ${newSelection[0].name} selected - select another file to compare`);
+      }
     } else {
-      // Select the file (max 2 files)
-      if (selectedFiles.length < 2) {
+      // Select the file with sliding window logic
+      if (selectedFiles.length === 0) {
+        // First file selection
+        setSelectedFiles([file]);
+        console.log("Selected first file:", file.name);
+        toast.info(`Selected ${file.name} - select another file to compare`);
+      } else if (selectedFiles.length === 1) {
+        // Second file selection - ready for comparison
         setSelectedFiles([...selectedFiles, file]);
-      } else {
-        // Replace the oldest selected file
-        const newSelectedFiles = [...selectedFiles];
-        newSelectedFiles.shift();
-        newSelectedFiles.push(file);
-        setSelectedFiles(newSelectedFiles);
+        console.log("Selected second file for comparison:", file.name);
+        toast.success(`Ready to compare: ${selectedFiles[0].name} vs ${file.name}`);
+      } else if (selectedFiles.length === 2) {
+        // Third file selection - sliding window (remove first, keep second, add new)
+        const newSelection = [selectedFiles[1], file];
+        setSelectedFiles(newSelection);
+        console.log("Sliding window selection:", {
+          removed: selectedFiles[0].name,
+          kept: selectedFiles[1].name,
+          added: file.name
+        });
+        toast.success(`Updated comparison: ${selectedFiles[1].name} vs ${file.name}`);
       }
     }
   };

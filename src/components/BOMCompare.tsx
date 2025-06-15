@@ -198,15 +198,13 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
     const footprint = getFootprint(comp);
     const description = getDescription(comp);
     const reference = getCompReference(comp);
-    const opt = getOpt(comp);
-
-    return (
-      <tr key={rowKey} className="hover:bg-gray-50">
-        <td className="p-2 border">{reference}</td>
-        <td className="p-2 border font-mono text-sm">{partNumber}</td>
-        <td className="p-2 border">{footprint}</td>
-        <td className="p-2 border">{opt}</td>
-        <td className="p-2 border text-sm">{description}</td>
+    const opt = getOpt(comp);    return (
+      <tr key={rowKey} className="hover:bg-muted/30 transition-colors">
+        <td className="p-2 border border-border text-foreground">{reference}</td>
+        <td className="p-2 border border-border font-mono text-sm text-foreground">{partNumber}</td>
+        <td className="p-2 border border-border text-foreground">{footprint}</td>
+        <td className="p-2 border border-border text-foreground">{opt}</td>
+        <td className="p-2 border border-border text-sm text-foreground">{description}</td>
       </tr>
     );};
 
@@ -265,14 +263,15 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
               <Badge variant="secondary">{addedComponents.length}</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse border border-gray-300">                <thead>                  <tr className="bg-green-50">
-                    <th className="p-2 border text-left">Reference</th>
-                    <th className="p-2 border text-left">Part Name</th>
-                    <th className="p-2 border text-left">Package</th>
-                    <th className="p-2 border text-left">OPT</th>
-                    <th className="p-2 border text-left">Description</th>
+          <CardContent>            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse border border-border">
+                <thead className="bg-green-50 dark:bg-green-950/30">
+                  <tr>
+                    <th className="p-2 border border-border text-left font-medium text-foreground">Reference</th>
+                    <th className="p-2 border border-border text-left font-medium text-foreground">Part Name</th>
+                    <th className="p-2 border border-border text-left font-medium text-foreground">Package</th>
+                    <th className="p-2 border border-border text-left font-medium text-foreground">OPT</th>
+                    <th className="p-2 border border-border text-left font-medium text-foreground">Description</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -292,14 +291,15 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
               <Badge variant="destructive">{deletedComponents.length}</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse border border-gray-300">                <thead>                  <tr className="bg-red-50">
-                    <th className="p-2 border text-left">Reference</th>
-                    <th className="p-2 border text-left">Part Name</th>
-                    <th className="p-2 border text-left">Package</th>
-                    <th className="p-2 border text-left">OPT</th>
-                    <th className="p-2 border text-left">Description</th>
+          <CardContent>            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse border border-border">
+                <thead className="bg-red-50 dark:bg-red-950/30">
+                  <tr>
+                    <th className="p-2 border border-border text-left font-medium text-foreground">Reference</th>
+                    <th className="p-2 border border-border text-left font-medium text-foreground">Part Name</th>
+                    <th className="p-2 border border-border text-left font-medium text-foreground">Package</th>
+                    <th className="p-2 border border-border text-left font-medium text-foreground">OPT</th>
+                    <th className="p-2 border border-border text-left font-medium text-foreground">Description</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -431,16 +431,15 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
                   );
                 })}
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-blue-50">
-                      <th className="p-2 border text-left">Reference</th>
-                      <th className="p-2 border text-left">Field</th>
-                      <th className="p-2 border text-left">Old Value</th>
-                      <th className="p-2 border text-left">New Value</th>
-                      <th className="p-2 border text-left">Status</th>
+            ) : (              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse border border-border">
+                  <thead className="bg-blue-50 dark:bg-blue-950/30">
+                    <tr>
+                      <th className="p-2 border border-border text-left font-medium text-foreground">Reference</th>
+                      <th className="p-2 border border-border text-left font-medium text-foreground">Field</th>
+                      <th className="p-2 border border-border text-left font-medium text-foreground">Old Value</th>
+                      <th className="p-2 border border-border text-left font-medium text-foreground">New Value</th>
+                      <th className="p-2 border border-border text-left font-medium text-foreground">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -461,22 +460,21 @@ const BOMCompare: React.FC<BOMCompareProps> = ({ comparisonResult }) => {
                         const hasData = field.oldVal || field.newVal;
                         
                         if (!hasData) return null;
-                        
-                        return (
-                          <tr key={`${ref}-${fieldIndex}`} className={hasChange ? "bg-yellow-50" : "bg-gray-50"}>
-                            <td className="p-2 border font-medium">{fieldIndex === 0 ? ref : ''}</td>
-                            <td className="p-2 border">{field.name}</td>
-                            <td className={`p-2 border ${hasChange ? 'text-red-600 line-through' : 'text-gray-600'}`}>
+                          return (
+                          <tr key={`${ref}-${fieldIndex}`} className={hasChange ? "bg-yellow-50 dark:bg-yellow-950/30" : "bg-muted/20"}>
+                            <td className="p-2 border border-border font-medium text-foreground">{fieldIndex === 0 ? ref : ''}</td>
+                            <td className="p-2 border border-border text-foreground">{field.name}</td>
+                            <td className={`p-2 border border-border ${hasChange ? 'text-red-600 dark:text-red-400 line-through' : 'text-muted-foreground'}`}>
                               {field.oldVal || '(empty)'}
                             </td>
-                            <td className={`p-2 border ${hasChange ? 'text-green-600 font-bold' : 'text-gray-600'}`}>
+                            <td className={`p-2 border border-border ${hasChange ? 'text-green-600 dark:text-green-400 font-bold' : 'text-muted-foreground'}`}>
                               {field.newVal || '(empty)'}
                             </td>
-                            <td className="p-2 border">
+                            <td className="p-2 border border-border">
                               {hasChange ? (
-                                <Badge variant="outline" className="bg-yellow-100">Changed</Badge>
+                                <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-950/50">Changed</Badge>
                               ) : (
-                                <span className="text-xs text-gray-400">Unchanged</span>
+                                <span className="text-xs text-muted-foreground">Unchanged</span>
                               )}
                             </td>
                           </tr>

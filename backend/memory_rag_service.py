@@ -68,8 +68,7 @@ class MemoryRAGService:
             return
         
         logger.info(f"Processing {len(components)} components from {source_name}")
-        
-        # Add components to vector database with progress tracking
+          # Add components to vector database with progress tracking
         documents = []
         for i, component in enumerate(components):
             # Create searchable content
@@ -85,6 +84,11 @@ class MemoryRAGService:
                 "type": "component",
                 **component
             }
+            
+            # Debug logging for C999
+            refdes = component.get("REFDES", "")
+            if refdes == "C999":
+                logger.info(f"Processing C999 for embedding: content='{content}', metadata={metadata}")
             
             documents.append({
                 "content": content,

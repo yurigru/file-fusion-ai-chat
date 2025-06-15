@@ -152,12 +152,12 @@ export class RAGService {
 
     return await response.json();
   }
-
   async sendRAGMessage(request: {
     model: string;
     messages: Array<{ role: string; content: string }>;
     stream?: boolean;
     ollama_url?: string;
+    custom_system_prompt?: string;
   }): Promise<any> {
     const response = await fetch(`${this.baseUrl}/api/chat/rag-completions`, {
       method: 'POST',

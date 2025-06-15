@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { ComparisonFiles, ComparisonResult, UploadedFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeftRight, Plus, Minus, Check, RefreshCw, ArrowRightLeft } from "lucide-react";
+import { ArrowLeftRight, Plus, Minus, Check, RefreshCw, ArrowRightLeft, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import FileTable from "@/components/FileTable";
 
 interface FileComparisonProps {
@@ -25,6 +26,32 @@ const FileComparison = ({ comparisonFiles, onCompare, showTabs = true, isCompari
   const [isDirectionSwapped, setIsDirectionSwapped] = useState(false);
   
   const { file1, file2, result } = comparisonFiles;
+  
+  // Check if auto-detection occurred based on filenames
+  const getAutoDetectionInfo = () => {
+    if (!file1 || !file2) return null;
+    
+    const file1Name = file1.name.toLowerCase();
+    const file2Name = file2.name.toLowerCase();
+    
+    const file1HasOld = file1Name.includes('old');
+    const file1HasNew = file1Name.includes('new');
+    const file2HasOld = file2Name.includes('old');
+    const file2HasNew = file2Name.includes('new');
+    
+    if ((file1HasOld && file2HasNew) || (file2HasOld && file1HasNew)) {
+      return {
+        detected: true,
+        oldFile: file1HasOld ? file1.name : file2.name,
+        newFile: file1HasNew ? file1.name : file2.name,
+        wasSwapped: file2HasOld && file1HasNew
+      };
+    }
+    
+    return null;
+  };
+  
+  const autoDetectionInfo = getAutoDetectionInfo();
   
   // Get effective file order based on direction
   const getEffectiveFiles = () => {
@@ -201,8 +228,17 @@ const FileComparison = ({ comparisonFiles, onCompare, showTabs = true, isCompari
     if (line.startsWith('~ ')) return 'bg-changed/10 text-changed';
     return '';
   };
-
   return (    <div className="space-y-4">
+      {autoDetectionInfo?.detected && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Auto-detected comparison direction: <strong>{autoDetectionInfo.oldFile}</strong> (old) → <strong>{autoDetectionInfo.newFile}</strong> (new)
+            {autoDetectionInfo.wasSwapped && " (files were automatically reordered)"}
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">File Comparison</h3>
         <div className="flex items-center space-x-2">
@@ -241,7 +277,9 @@ const FileComparison = ({ comparisonFiles, onCompare, showTabs = true, isCompari
             <p className="text-sm font-medium">
               File 1 {isDirectionSwapped && <span className="text-xs text-muted-foreground">(swapped)</span>}:
             </p>
-            <span className="text-xs text-muted-foreground">Old/Base</span>
+            <span className="text-xs text-muted-foreground bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">
+              {autoDetectionInfo?.detected ? "Old/Base" : "Base"}
+            </span>
           </div>
           <div className="bg-background p-3 rounded border min-h-20 flex items-center justify-center">
             {displayFile1 ? (
@@ -257,7 +295,9 @@ const FileComparison = ({ comparisonFiles, onCompare, showTabs = true, isCompari
             <p className="text-sm font-medium">
               File 2 {isDirectionSwapped && <span className="text-xs text-muted-foreground">(swapped)</span>}:
             </p>
-            <span className="text-xs text-muted-foreground">New/Modified</span>
+            <span className="text-xs text-muted-foreground bg-green-100 dark:bg-green-900 px-2 py-1 rounded">
+              {autoDetectionInfo?.detected ? "New/Target" : "Compare"}
+            </span>
           </div>
           <div className="bg-background p-3 rounded border min-h-20 flex items-center justify-center">
             {displayFile2 ? (

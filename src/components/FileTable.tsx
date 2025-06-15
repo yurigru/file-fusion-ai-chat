@@ -49,22 +49,21 @@ const FileTable: React.FC<FileTableProps> = ({ data }) => {
     }, [filtered, sortKey, sortAsc]);
 
     return (
-      <div className="overflow-x-auto">
-        <div className="mb-2 flex items-center gap-2">
+      <div className="overflow-x-auto">        <div className="mb-2 flex items-center gap-2">
           <input
-            className="border rounded px-2 py-1 text-sm"
+            className="border border-border rounded px-2 py-1 text-sm bg-background text-foreground"
             placeholder="Search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <table className="min-w-full border text-sm">
-          <thead>
+        <table className="min-w-full border-collapse border border-border text-sm">
+          <thead className="bg-muted/50">
             <tr>
               {COLUMN_HEADERS.map(col => (
                 <th
                   key={col.key}
-                  className="border px-2 py-1 cursor-pointer select-none"
+                  className="border border-border px-2 py-1 cursor-pointer select-none font-medium text-foreground hover:bg-muted/80 transition-colors"
                   onClick={() => {
                     if (sortKey === col.key) setSortAsc(a => !a);
                     else { setSortKey(col.key); setSortAsc(true); }
@@ -77,9 +76,9 @@ const FileTable: React.FC<FileTableProps> = ({ data }) => {
           </thead>
           <tbody>
             {sorted.map((row, i) => (
-              <tr key={i}>
+              <tr key={i} className="hover:bg-muted/30 transition-colors">
                 {COLUMN_HEADERS.map(col => (
-                  <td key={col.key} className="border px-2 py-1">{row[col.key] || ""}</td>
+                  <td key={col.key} className="border border-border px-2 py-1 text-foreground">{row[col.key] || ""}</td>
                 ))}
               </tr>
             ))}

@@ -191,6 +191,366 @@
   }
 }
 
+/* Atom Light Theme */
+.atom-light {
+  --background: 250 250 250;
+  --foreground: 30 30 30;
+  --card: 250 250 250;
+  --card-foreground: 30 30 30;
+  --popover: 250 250 250;
+  --popover-foreground: 30 30 30;
+  --primary: 59 130 246;
+  --primary-foreground: 255 255 255;
+  --secondary: 240 240 240;
+  --secondary-foreground: 30 30 30;
+  --muted: 240 240 240;
+  --muted-foreground: 115 115 115;
+  --accent: 240 240 240;
+  --accent-foreground: 30 30 30;
+  --destructive: 239 68 68;
+  --destructive-foreground: 255 255 255;
+  --border: 210 210 210;
+  --input: 245 245 245;
+  --ring: 59 130 246;
+  --radius: 0.5rem;
+}
+
+/* Atom Dark Theme */
+.atom-dark {
+  --background: 40 44 52;
+  --foreground: 171 178 191;
+  --card: 40 44 52;
+  --card-foreground: 171 178 191;
+  --popover: 40 44 52;
+  --popover-foreground: 171 178 191;
+  --primary: 97 175 239;
+  --primary-foreground: 40 44 52;
+  --secondary: 33 37 43;
+  --secondary-foreground: 171 178 191;
+  --muted: 33 37 43;
+  --muted-foreground: 92 99 112;
+  --accent: 33 37 43;
+  --accent-foreground: 171 178 191;
+  --destructive: 224 108 117;
+  --destructive-foreground: 40 44 52;
+  --border: 62 68 81;
+  --input: 62 68 81;
+  --ring: 97 175 239;
+  --radius: 0.5rem;
+}
+
+/* GitHub Light Theme */
+.github-light {
+  --background: 255 255 255;
+  --foreground: 36 41 47;
+  --card: 255 255 255;
+  --card-foreground: 36 41 47;
+  --popover: 255 255 255;
+  --popover-foreground: 36 41 47;
+  --primary: 9 105 218;
+  --primary-foreground: 255 255 255;
+  --secondary: 246 248 250;
+  --secondary-foreground: 36 41 47;
+  --muted: 246 248 250;
+  --muted-foreground: 106 115 125;
+  --accent: 246 248 250;
+  --accent-foreground: 36 41 47;
+  --destructive: 218 54 51;
+  --destructive-foreground: 255 255 255;
+  --border: 208 215 222;
+  --input: 208 215 222;
+  --ring: 9 105 218;
+  --radius: 0.5rem;
+}
+
+/* GitHub Dark Theme */
+.github-dark {
+  --background: 13 17 23;
+  --foreground: 230 237 243;
+  --card: 13 17 23;
+  --card-foreground: 230 237 243;
+  --popover: 13 17 23;
+  --popover-foreground: 230 237 243;
+  --primary: 88 166 255;
+  --primary-foreground: 13 17 23;
+  --secondary: 33 38 45;
+  --secondary-foreground: 230 237 243;
+  --muted: 33 38 45;
+  --muted-foreground: 125 133 144;
+  --accent: 33 38 45;
+  --accent-foreground: 230 237 243;
+  --destructive: 248 81 73;
+  --destructive-foreground: 13 17 23;
+  --border: 48 54 61;
+  --input: 48 54 61;
+  --ring: 88 166 255;
+  --radius: 0.5rem;
+}
+
+/* Solarized Light Theme */
+.solarized-light {
+  --background: 253 246 227;
+  --foreground: 101 123 131;
+  --card: 253 246 227;
+  --card-foreground: 101 123 131;
+  --popover: 253 246 227;
+  --popover-foreground: 101 123 131;
+  --primary: 38 139 210;
+  --primary-foreground: 253 246 227;
+  --secondary: 238 232 213;
+  --secondary-foreground: 101 123 131;
+  --muted: 238 232 213;
+  --muted-foreground: 147 161 161;
+  --accent: 238 232 213;
+  --accent-foreground: 101 123 131;
+  --destructive: 220 50 47;
+  --destructive-foreground: 253 246 227;
+  --border: 238 232 213;
+  --input: 238 232 213;
+  --ring: 38 139 210;
+  --radius: 0.5rem;
+}
+
+/* Solarized Dark Theme */
+.solarized-dark {
+  --background: 0 43 54;
+  --foreground: 131 148 150;
+  --card: 0 43 54;
+  --card-foreground: 131 148 150;
+  --popover: 0 43 54;
+  --popover-foreground: 131 148 150;
+  --primary: 38 139 210;
+  --primary-foreground: 0 43 54;
+  --secondary: 7 54 66;
+  --secondary-foreground: 131 148 150;
+  --muted: 7 54 66;
+  --muted-foreground: 88 110 117;
+  --accent: 7 54 66;
+  --accent-foreground: 131 148 150;
+  --destructive: 220 50 47;
+  --destructive-foreground: 0 43 54;
+  --border: 7 54 66;
+  --input: 7 54 66;
+  --ring: 38 139 210;
+  --radius: 0.5rem;
+}
+
+/* Nord Theme */
+.nord {
+  --background: 46 52 64;
+  --foreground: 216 222 233;
+  --card: 46 52 64;
+  --card-foreground: 216 222 233;
+  --popover: 46 52 64;
+  --popover-foreground: 216 222 233;
+  --primary: 136 192 208;
+  --primary-foreground: 46 52 64;
+  --secondary: 59 66 82;
+  --secondary-foreground: 216 222 233;
+  --muted: 59 66 82;
+  --muted-foreground: 129 161 193;
+  --accent: 59 66 82;
+  --accent-foreground: 216 222 233;
+  --destructive: 191 97 106;
+  --destructive-foreground: 46 52 64;
+  --border: 67 76 94;
+  --input: 67 76 94;
+  --ring: 136 192 208;
+  --radius: 0.5rem;
+}
+
+/* Monokai Theme */
+.monokai {
+  --background: 39 40 34;
+  --foreground: 248 248 242;
+  --card: 39 40 34;
+  --card-foreground: 248 248 242;
+  --popover: 39 40 34;
+  --popover-foreground: 248 248 242;
+  --primary: 166 226 46;
+  --primary-foreground: 39 40 34;
+  --secondary: 73 72 62;
+  --secondary-foreground: 248 248 242;
+  --muted: 73 72 62;
+  --muted-foreground: 117 113 94;
+  --accent: 73 72 62;
+  --accent-foreground: 248 248 242;
+  --destructive: 249 38 114;
+  --destructive-foreground: 39 40 34;
+  --border: 73 72 62;
+  --input: 73 72 62;
+  --ring: 166 226 46;
+  --radius: 0.5rem;
+}
+
+/* Dracula Theme */
+.dracula {
+  --background: 40 42 54;
+  --foreground: 248 248 242;
+  --card: 40 42 54;
+  --card-foreground: 248 248 242;
+  --popover: 40 42 54;
+  --popover-foreground: 248 248 242;
+  --primary: 189 147 249;
+  --primary-foreground: 40 42 54;
+  --secondary: 68 71 90;
+  --secondary-foreground: 248 248 242;
+  --muted: 68 71 90;
+  --muted-foreground: 98 114 164;
+  --accent: 68 71 90;
+  --accent-foreground: 248 248 242;
+  --destructive: 255 85 85;
+  --destructive-foreground: 40 42 54;
+  --border: 68 71 90;
+  --input: 68 71 90;
+  --ring: 189 147 249;
+  --radius: 0.5rem;
+}
+
+/* One Dark Theme */
+.one-dark {
+  --background: 33 37 43;
+  --foreground: 171 178 191;
+  --card: 33 37 43;
+  --card-foreground: 171 178 191;
+  --popover: 33 37 43;
+  --popover-foreground: 171 178 191;
+  --primary: 97 175 239;
+  --primary-foreground: 33 37 43;
+  --secondary: 40 44 52;
+  --secondary-foreground: 171 178 191;
+  --muted: 40 44 52;
+  --muted-foreground: 92 99 112;
+  --accent: 40 44 52;
+  --accent-foreground: 171 178 191;
+  --destructive: 224 108 117;
+  --destructive-foreground: 33 37 43;
+  --border: 59 65 81;
+  --input: 59 65 81;
+  --ring: 97 175 239;
+  --radius: 0.5rem;
+}
+
+/* Tomorrow Theme */
+.tomorrow {
+  --background: 255 255 255;
+  --foreground: 77 77 76;
+  --card: 255 255 255;
+  --card-foreground: 77 77 76;
+  --popover: 255 255 255;
+  --popover-foreground: 77 77 76;
+  --primary: 66 113 174;
+  --primary-foreground: 255 255 255;
+  --secondary: 239 239 239;
+  --secondary-foreground: 77 77 76;
+  --muted: 239 239 239;
+  --muted-foreground: 142 144 140;
+  --accent: 239 239 239;
+  --accent-foreground: 77 77 76;
+  --destructive: 200 40 41;
+  --destructive-foreground: 255 255 255;
+  --border: 214 214 214;
+  --input: 214 214 214;
+  --ring: 66 113 174;
+  --radius: 0.5rem;
+}
+
+/* Tomorrow Night Theme */
+.tomorrow-night {
+  --background: 29 31 33;
+  --foreground: 197 200 198;
+  --card: 29 31 33;
+  --card-foreground: 197 200 198;
+  --popover: 29 31 33;
+  --popover-foreground: 197 200 198;
+  --primary: 129 162 190;
+  --primary-foreground: 29 31 33;
+  --secondary: 40 42 46;
+  --secondary-foreground: 197 200 198;
+  --muted: 40 42 46;
+  --muted-foreground: 150 152 150;
+  --accent: 40 42 46;
+  --accent-foreground: 197 200 198;
+  --destructive: 204 102 102;
+  --destructive-foreground: 29 31 33;
+  --border: 55 59 65;
+  --input: 55 59 65;
+  --ring: 129 162 190;
+  --radius: 0.5rem;
+}
+
+/* Material Theme */
+.material {
+  --background: 250 250 250;
+  --foreground: 33 33 33;
+  --card: 250 250 250;
+  --card-foreground: 33 33 33;
+  --popover: 250 250 250;
+  --popover-foreground: 33 33 33;
+  --primary: 33 150 243;
+  --primary-foreground: 255 255 255;
+  --secondary: 245 245 245;
+  --secondary-foreground: 33 33 33;
+  --muted: 245 245 245;
+  --muted-foreground: 117 117 117;
+  --accent: 245 245 245;
+  --accent-foreground: 33 33 33;
+  --destructive: 244 67 54;
+  --destructive-foreground: 255 255 255;
+  --border: 224 224 224;
+  --input: 224 224 224;
+  --ring: 33 150 243;
+  --radius: 0.5rem;
+}
+
+/* Cyberpunk Theme */
+.cyberpunk {
+  --background: 13 13 26;
+  --foreground: 0 255 255;
+  --card: 13 13 26;
+  --card-foreground: 0 255 255;
+  --popover: 13 13 26;
+  --popover-foreground: 0 255 255;
+  --primary: 255 0 255;
+  --primary-foreground: 13 13 26;
+  --secondary: 26 13 26;
+  --secondary-foreground: 0 255 255;
+  --muted: 26 13 26;
+  --muted-foreground: 153 51 255;
+  --accent: 26 13 26;
+  --accent-foreground: 0 255 255;
+  --destructive: 255 20 147;
+  --destructive-foreground: 13 13 26;
+  --border: 153 51 255;
+  --input: 26 13 26;
+  --ring: 255 0 255;
+  --radius: 0.5rem;
+}
+
+/* Synthwave Theme */
+.synthwave {
+  --background: 26 18 46;
+  --foreground: 255 255 255;
+  --card: 26 18 46;
+  --card-foreground: 255 255 255;
+  --popover: 26 18 46;
+  --popover-foreground: 255 255 255;
+  --primary: 255 20 147;
+  --primary-foreground: 26 18 46;
+  --secondary: 51 25 71;
+  --secondary-foreground: 255 255 255;
+  --muted: 51 25 71;
+  --muted-foreground: 147 112 219;
+  --accent: 51 25 71;
+  --accent-foreground: 255 255 255;
+  --destructive: 255 69 0;
+  --destructive-foreground: 26 18 46;
+  --border: 72 61 139;
+  --input: 51 25 71;
+  --ring: 255 20 147;
+  --radius: 0.5rem;
+}
+
 @layer base {
   * {
     @apply border-border;

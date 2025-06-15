@@ -58,6 +58,7 @@ class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     stream: bool = False
     ollama_url: str = "http://localhost:11434"
+    custom_system_prompt: Optional[str] = None
 
 class ChatResponse(BaseModel):
     id: str
@@ -844,12 +845,31 @@ async def rag_chat_completions(request: ChatRequest):
                 logger.warning(f"RAG query failed, continuing without context: {e}")
         
         # Build enhanced prompt with RAG context
-        enhanced_messages = []
-          # Add system message if not present
+        enhanced_messages = []        # Add system message if not present
         has_system = any(msg.role == "system" for msg in request.messages)
         if not has_system:
-            if rag_results:
+            # Use custom system prompt if provided, otherwise use default
+            if request.custom_system_prompt:
+                system_msg = request.custom_system_prompt
+            elif rag_results:
                 system_msg = """You are a knowledgeable electronics engineer and BOM (Bill of Materials) analyst. You have access to detailed component information from uploaded BOMs.
+
+COMPONENT TYPE IDENTIFICATION:
+- Resistors: REFDES starting with 'R' OR description containing 'RES', 'RESISTOR'
+- Capacitors: REFDES starting with 'C' OR description containing 'CAP', 'CAPACITOR' 
+- ICs: REFDES starting with 'U' OR description containing 'IC', 'AMPLIFIER', 'BUFFER'
+- Transistors: REFDES starting with 'Q' OR description containing 'TRANS', 'MOSFET'
+- Diodes: REFDES starting with 'D' OR description containing 'DIODE'
+
+SOURCE FILE FILTERING:
+- "new bom" = components from a_new.xml only
+- "old bom" = components from a_old.xml only
+- "both" or unspecified = components from both files
+
+QUERY INTERPRETATION:
+- "show all resistors" = find components with RES/RESISTOR in description OR R prefix
+- "resistors in new bom" = resistors from a_new.xml only
+- "compare resistors" = show resistor differences between old and new
 
 When answering questions:
 - Use the provided component data to give accurate, specific responses
@@ -859,6 +879,7 @@ When answering questions:
 - Consider quantities and usage patterns
 - Be precise about technical specifications
 - If asked about components not in the provided data, clearly state that
+- If RAG returns wrong component types, explain the mismatch and suggest better search terms
 
 You understand BOM structures with fields like:
 - REFDES (Reference Designator, e.g., C1, R5, U10)
@@ -1052,6 +1073,90 @@ Instructions:
             status_code=500,
             content={"error": f"RAG chat failed: {str(e)}"}
         )
+
+# Component change detection endpoint
+@app.get("/api/rag/component-changes")
+async def get_component_changes():
+    """Get actual component changes between old and new BOMs"""
+    try:
+        # Get all components from both files
+        all_results = await memory_rag_service.query_similar_components("", 1000)  # Get all components
+        
+        old_components = {}
+        new_components = {}
+        
+        # Separate components by source file
+        for result in all_results:
+            metadata = result.get('metadata', {})
+            refdes = metadata.get('REFDES', '')
+            source = metadata.get('source', '')
+            
+            if not refdes:
+                continue
+                
+            component_data = {
+                'refdes': refdes,
+                'part_name': metadata.get('PART-NAME', ''),
+                'part_num': metadata.get('PART-NUM', ''),
+                'description': metadata.get('DESCRIPTION', ''),
+                'package': metadata.get('PACKAGE', ''),
+                'qty': metadata.get('QTY', ''),
+                'opt': metadata.get('OPT', '')
+            }
+            
+            if source == 'a_old.xml':
+                old_components[refdes] = component_data
+            elif source == 'a_new.xml':
+                new_components[refdes] = component_data
+        
+        # Find actual changes (same REFDES, different values)
+        changes = []
+        for refdes in old_components:
+            if refdes in new_components:
+                old_comp = old_components[refdes]
+                new_comp = new_components[refdes]
+                
+                # Check if any field is different
+                if (old_comp['part_name'] != new_comp['part_name'] or
+                    old_comp['part_num'] != new_comp['part_num'] or
+                    old_comp['description'] != new_comp['description'] or
+                    old_comp['package'] != new_comp['package'] or
+                    old_comp['qty'] != new_comp['qty'] or
+                    old_comp['opt'] != new_comp['opt']):
+                    
+                    changes.append({
+                        'refdes': refdes,
+                        'old': old_comp,
+                        'new': new_comp,
+                        'changes': []  # Could detail specific field changes
+                    })
+        
+        # Find added components (in new but not old)
+        added = []
+        for refdes in new_components:
+            if refdes not in old_components:
+                added.append(new_components[refdes])
+        
+        # Find removed components (in old but not new)
+        removed = []
+        for refdes in old_components:
+            if refdes not in new_components:
+                removed.append(old_components[refdes])
+        
+        return {
+            "changes": changes,
+            "added": added,
+            "removed": removed,
+            "summary": {
+                "total_changes": len(changes),
+                "total_added": len(added),
+                "total_removed": len(removed)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error detecting component changes: {e}")
+        return {"error": str(e), "changes": [], "added": [], "removed": []}
 
 if __name__ == "__main__":
     import uvicorn

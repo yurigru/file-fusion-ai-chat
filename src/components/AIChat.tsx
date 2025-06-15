@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ModelSelector from "./ModelSelector";
 import MarkdownMessage from "./MarkdownMessage";
+import { ThemeSelector } from "./ThemeSelector";
 import { OllamaModel, ChatMessage, ComparisonResult, UploadedFile, ServerConfig, MCPTool } from "@/types";
 import { toast } from "@/components/ui/sonner";
 import { ChatService } from "@/services/chatService";
@@ -27,52 +28,48 @@ const AIChat = ({ selectedFile, comparisonResult, comparedFiles }: AIChatProps) 
     {
       id: `welcome-${Date.now()}`,
       role: "assistant",
-      content: `# 👋 Welcome to AI Assistant with Enhanced Chat!
+      content: `# 👋 Welcome to AI Assistant with Enhanced BOM Analysis!
 
-I'm your AI assistant powered by Ollama with **RAG (Retrieval-Augmented Generation)**. I now support **full Markdown rendering** for better text visibility!
+I'm your AI assistant powered by Ollama with **RAG (Retrieval-Augmented Generation)** and **Enhanced BOM Analysis** enabled by default!
 
 ## 🚀 What I can help you with:
 
-### 📁 File Analysis
+### 📁 **Smart Component Analysis** (🔥 **Enhanced by Default**)
+- **Resistor queries**: "show all resistors in new bom"
+- **Capacitor analysis**: "find capacitors from old BOM"
+- **IC identification**: "list ICs in a_new.xml"
+- **Component comparison**: "compare resistors between old and new"
+- **Smart filtering**: Understands component types and source files
+
+### 💡 **Enhanced Features**
+- **Markdown support** with syntax highlighting
+- **Component type detection** (R=Resistors, C=Capacitors, U=ICs)
+- **Source file filtering** (new bom vs old bom)
+- **Mismatch explanations** when search results don't match
+
+### 🤔 **General Assistance**
 - Analyzing uploaded files (BOMs, netlists, etc.)
 - Comparing file differences
 - Processing technical documents
-
-### 💡 Enhanced Features
-- **Markdown support** with syntax highlighting
-- Code blocks with proper formatting
-- Tables, lists, and rich text
-- Mathematical expressions and diagrams
-
-### 🤔 General Assistance
 - Answering questions on any topic
-- Explaining technical concepts
-- Using knowledge from uploaded BOMs
 
-## 📝 Markdown Examples:
+## 📝 **Try These Enhanced Queries:**
 
-Here's some \`inline code\` and a code block:
-
-\`\`\`javascript
-function greet(name) {
-    return \`Hello, \${name}!\`;
-}
-console.log(greet("World"));
+\`\`\`
+"show all resistors in new bom"
+"find 0402 capacitors"
+"list power ICs"
+"compare component changes"
 \`\`\`
 
-**Bold text**, *italic text*, and [links](https://example.com)
+## ⚙️ **Customize System Prompt**
 
-> This is a blockquote for important information
+Click the **Settings (⚙️)** button above to:
+- View the current **Enhanced BOM Analysis** prompt
+- Switch to **Technical Assistant** mode
+- Create your own **custom system prompt**
 
-| Feature | Status |
-|---------|--------|
-| Markdown | ✅ Enabled |
-| Syntax Highlighting | ✅ Enabled |
-| Tables | ✅ Enabled |
-
-I'm available even without uploading files! You can select different AI models from the dropdown above. 
-
-**What would you like to know?**`,
+**Enhanced BOM Analysis is active - try asking about components!**`,
       timestamp: Date.now()
     }
   ]);
@@ -88,11 +85,45 @@ I'm available even without uploading files! You can select different AI models f
   const [ragStatus, setRagStatus] = useState<RAGStatus | null>(null);
   const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
   const [isClearingKB, setIsClearingKB] = useState(false);
-  const [showRagDetails, setShowRagDetails] = useState(false);
-  const [serverConfig, setServerConfig] = useState<ServerConfig>({
+  const [showRagDetails, setShowRagDetails] = useState(false);  const [serverConfig, setServerConfig] = useState<ServerConfig>({
     type: "ollama",
     modelName: "llama3.2",
-    ollamaUrl: "http://localhost:11434",
+    ollamaUrl: "http://localhost:11434",    customSystemPrompt: `You are a knowledgeable electronics engineer and BOM (Bill of Materials) analyst. You have access to detailed component information from uploaded BOMs.
+
+COMPONENT TYPE IDENTIFICATION:
+- Resistors: REFDES starting with 'R' OR description containing 'RES', 'RESISTOR'
+- Capacitors: REFDES starting with 'C' OR description containing 'CAP', 'CAPACITOR' 
+- ICs: REFDES starting with 'U' OR description containing 'IC', 'AMPLIFIER', 'BUFFER'
+- Transistors: REFDES starting with 'Q' OR description containing 'TRANS', 'MOSFET'
+- Diodes: REFDES starting with 'D' OR description containing 'DIODE'
+
+SOURCE FILE FILTERING:
+- "new bom" = components from a_new.xml only
+- "old bom" = components from a_old.xml only
+
+QUERY INTERPRETATION:
+- "show all resistors" = find components with RES/RESISTOR in description OR R prefix
+- "resistors in new bom" = resistors from a_new.xml only
+- "compare resistors" = show resistor differences between old and new
+
+CHANGE DETECTION QUERIES:
+- "changed components" = Look for components that appear in both files but have different values
+- "what changed from old to new" = Focus on actual differences, not duplicates
+- "component changes" = Suggest using the Compare Files feature for detailed change analysis
+- If RAG returns identical components from both files, explain this is NOT a change
+
+RAG LIMITATIONS FOR CHANGES:
+- RAG shows individual components, not comparisons
+- For detailed change analysis, recommend: "Use the Compare Files feature above"
+- Explain when results don't actually show changes
+
+When answering questions:
+- Use the provided component data to give accurate, specific responses
+- Reference components by their REFDES when relevant
+- Include part numbers, descriptions, and package types as appropriate
+- If RAG returns wrong component types, explain the mismatch and suggest better search terms
+- If asked about changes but RAG shows duplicates, clarify this limitation
+- Be precise about technical specifications`,
     mcpConfig: {
       url: "http://localhost:8080",
       serverType: "local",
@@ -336,8 +367,7 @@ I'm available even without uploading files! You can select different AI models f
         
         let response: any;
         let ragResultsForMessage: RAGResult[] = [];
-        
-        // Use RAG if available and enabled
+          // Use RAG if available and enabled
         if (useRAG) {
           // Try RAG-enhanced chat first
           try {            const ragResponse = await ragService.sendRAGMessage({
@@ -346,7 +376,8 @@ I'm available even without uploading files! You can select different AI models f
                 role: msg.role,
                 content: msg.content
               })),
-              ollama_url: serverConfig.ollamaUrl || "http://localhost:11434"
+              ollama_url: serverConfig.ollamaUrl || "http://localhost:11434",
+              custom_system_prompt: serverConfig.customSystemPrompt
             });
             
             response = ragResponse;
@@ -544,12 +575,8 @@ This would be processed by the MCP server with the available tools.`;
                     <p className="text-xs text-muted-foreground">
                       Application-wide settings and configuration options.
                     </p>
-                    
-                    <div className="grid grid-cols-1 gap-2 text-xs">
-                      <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
-                        <span className="font-medium">Theme Mode</span>
-                        <span className="text-muted-foreground">System Default</span>
-                      </div>
+                      <div className="grid grid-cols-1 gap-2 text-xs">
+                      <ThemeSelector variant="compact" />
                       
                       <div className="flex justify-between items-center p-2 bg-muted/20 rounded">
                         <span className="font-medium">File Auto-Detection</span>

@@ -125,6 +125,7 @@ export interface ServerConfig {
   modelName: string;
   mcpConfig?: MCPServerConfig;
   ollamaUrl?: string;
+  customSystemPrompt?: string;
 }
 
 export interface ModelSelectorProps {

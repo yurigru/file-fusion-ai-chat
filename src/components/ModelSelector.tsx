@@ -478,8 +478,109 @@ const ModelSelector = ({
                   <br />
                   <span className="text-xs text-muted-foreground">Other options: mistral, codellama, phi3</span>
                 </AlertDescription>
-              </Alert>
-            )}
+              </Alert>            )}            {/* Custom System Prompt */}
+            <div className="space-y-2">
+              <Label htmlFor="system-prompt">
+                Custom System Prompt 
+                <span className="text-green-600 font-medium"> (Enhanced BOM Analysis Active)</span>
+              </Label>
+              <textarea
+                id="system-prompt"
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Enhanced BOM Analysis prompt is active by default. Modify here to customize AI behavior..."
+                value={serverConfig.customSystemPrompt || ""}
+                onChange={(e) => {
+                  onServerConfigChange({
+                    ...serverConfig,
+                    customSystemPrompt: e.target.value
+                  });
+                }}
+              />
+              <div className="text-xs text-muted-foreground">
+                ✅ <strong>Enhanced BOM Analysis</strong> is enabled by default for better component queries. 
+                Modify above to customize, or use presets below.
+              </div>
+              
+              {/* Preset System Prompts */}
+              <div className="space-y-1">
+                <Label className="text-xs">Quick Presets:</Label>
+                <div className="flex flex-wrap gap-1">                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7 border-green-500 text-green-600"
+                    onClick={() => {                      const enhancedBOMPrompt = `You are a knowledgeable electronics engineer and BOM (Bill of Materials) analyst. You have access to detailed component information from uploaded BOMs.
+
+COMPONENT TYPE IDENTIFICATION:
+- Resistors: REFDES starting with 'R' OR description containing 'RES', 'RESISTOR'
+- Capacitors: REFDES starting with 'C' OR description containing 'CAP', 'CAPACITOR' 
+- ICs: REFDES starting with 'U' OR description containing 'IC', 'AMPLIFIER', 'BUFFER'
+- Transistors: REFDES starting with 'Q' OR description containing 'TRANS', 'MOSFET'
+- Diodes: REFDES starting with 'D' OR description containing 'DIODE'
+
+SOURCE FILE FILTERING:
+- "new bom" = components from a_new.xml only
+- "old bom" = components from a_old.xml only
+
+QUERY INTERPRETATION:
+- "show all resistors" = find components with RES/RESISTOR in description OR R prefix
+- "resistors in new bom" = resistors from a_new.xml only
+- "compare resistors" = show resistor differences between old and new
+
+CHANGE DETECTION QUERIES:
+- "changed components" = Look for components that appear in both files but have different values
+- "what changed from old to new" = Focus on actual differences, not duplicates
+- "component changes" = Suggest using the Compare Files feature for detailed change analysis
+- If RAG returns identical components from both files, explain this is NOT a change
+
+RAG LIMITATIONS FOR CHANGES:
+- RAG shows individual components, not comparisons
+- For detailed change analysis, recommend: "Use the Compare Files feature above"
+- Explain when results don't actually show changes
+
+When answering questions:
+- Use the provided component data to give accurate, specific responses
+- Reference components by their REFDES when relevant
+- Include part numbers, descriptions, and package types as appropriate
+- If RAG returns wrong component types, explain the mismatch and suggest better search terms
+- If asked about changes but RAG shows duplicates, clarify this limitation
+- Be precise about technical specifications`;
+                      onServerConfigChange({
+                        ...serverConfig,
+                        customSystemPrompt: enhancedBOMPrompt
+                      });
+                    }}
+                  >
+                    📋 Enhanced BOM Analysis (Default)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => {
+                      onServerConfigChange({
+                        ...serverConfig,
+                        customSystemPrompt: "You are a helpful AI assistant focused on technical documentation analysis and electronic design."
+                      });
+                    }}
+                  >
+                    🔧 Technical Assistant
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => {
+                      onServerConfigChange({
+                        ...serverConfig,
+                        customSystemPrompt: ""
+                      });
+                    }}
+                  >
+                    🗑️ Clear
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </TabsContent>
           <TabsContent value="mcp" className="space-y-4">

@@ -139,14 +139,12 @@ const FileList = ({ files, selectedFiles, onSelectFile, onRemoveFile, onPreviewF
                   </p>
                 </div>
               </div>
-              <div className="flex space-x-2 ml-4">
-                <Button
+              <div className="flex space-x-2 ml-4">                <Button
                   variant={isSelected(file) ? "default" : "outline"}
                   size="sm"
                   onClick={(e) => handleSelectClick(e, file)}
-                  disabled={!isSelected(file) && selectedFiles.length >= 2}
                   className="text-xs"
-                >                  {isSelected(file) ? (
+                >{isSelected(file) ? (
                     <>
                       <Check className="mr-1 h-3 w-3" /> Selected
                     </>
